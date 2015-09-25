@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+./server -p 8888 -d ~/tega/var -t global -e ~/tega/plugins/global
+

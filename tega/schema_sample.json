@@ -1,0 +1,11 @@
+{"schema":
+   {"root":
+      {"a": {"type": "str"},
+       "b": {"type": "str"},
+       "c": {"d": {"id": {"type": "int"}, "af": {"type": "str"}, "prefix": {"type": "str"}},
+             "e": {"id": {"type": "int"}, "af": {"type": "str"}, "prefix": {"type": "str"}, "dict": {"a": {"type": "int"}, "b": {"type": "str"}}}},
+       "f": {"g": {"_indexes": ["msg", "to"], "msg": {"type": "str"}, "to": {"type": "str"}, "h": {"type": "str"}}},
+       "beatles": {"members": {"type": "list"}}
+      }
+   }
+}
