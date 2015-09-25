@@ -1,6 +1,6 @@
 [MVC](http://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93controller)を参考に、今週(2014/9/2)色々と考えた事を絵に書いてみた。ネットワーク機器をデータベースに見立てると、このようになった。
 
-![D-MVC](https://raw.githubusercontent.com/alexanderplatz1999/tega/master/doc/d-mvc.png)
+![D-MVC](https://raw.githubusercontent.com/araobp/tega/master/doc/d-mvc.png)
 
 データ実体はNOSが提供するCLIの先のデータベース,OVSDBやLinuxの/etc等にあるイメージで、ある程度抽象化されたtree構造のModel(当プロジェクトでは、これをtegaと呼ぶ)がネットワーク全体にまたがる。
 

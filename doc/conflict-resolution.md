@@ -56,4 +56,4 @@ a!                   Raise Exception
 
 def conflict_resolution(subscriber, sync_path, transactions):
 
-https://github.com/alexanderplatz1999/tega/blob/master/tega/idb.py
+https://github.com/araobp/tega/blob/master/tega/idb.py
