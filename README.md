@@ -79,7 +79,7 @@ Requirements
 - pyyaml
 - enum34(<= python3.2)
 
-TODO
+TODO(2016/01/10)
 ----
 - develop tega driver for golang
 - support DCN with two-phase commit
