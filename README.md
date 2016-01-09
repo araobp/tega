@@ -20,7 +20,7 @@ Use cases
 
 Try it out
 ----------
-You need to have python3 installed on your Debian/Ubuntu Linux.
+You need to have python3.4 installed on your Debian/Ubuntu Linux.
 
 ```
 $ cd
