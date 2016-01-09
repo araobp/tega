@@ -18,6 +18,39 @@ Use cases
 
 ![Deployment](https://docs.google.com/drawings/d/16z8YFQztsGXWacq8fWyVzs85UTjZqllIs-hGGwav9GY/pub?w=640&h=480)
 
+Try it out
+----------
+```
+$ cd
+$ git clone http://github.com/araobp/tega
+$ pip3 install tornado
+$ pip3 install httplib2
+$ pip3 install pyyaml
+$ mkdir ~/tega/var
+```
+
+Append the following line to your ~/.bashrc
+```
+export PYTHONPATH=$PYTHONPATH:$HOME/tega
+```
+
+Start tega server like this:
+```
+$ cd ~/tega/scripts
+$ ./global
+```
+
+Python3.4 users also require the following package:
+```
+$ pip3 install backports_abc
+```
+
+Test tega CLI:
+```
+$ cd ~/tega/scripts
+$ ./cli
+```
+
 
 Current architecture
 --------------------
