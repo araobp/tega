@@ -20,6 +20,8 @@ Use cases
 
 Try it out
 ----------
+You need to have python3 installed on your Debian/Ubuntu Linux.
+
 ```
 $ cd
 $ git clone http://github.com/araobp/tega
