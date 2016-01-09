@@ -79,6 +79,12 @@ Requirements
 - pyyaml
 - enum34(<= python3.2)
 
+TODO
+----
+- develop tega driver for golang
+- support DCN with two-phase commit
+- use protobuf for data validation
+
 References
 ----------
 * [OVSDB(RFC7047)](https://tools.ietf.org/html/rfc7047)
