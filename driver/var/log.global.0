@@ -1,0 +1,7 @@
+?
+{'instance': '%GlobalPlugin1.max', 'path': 'inventory.ne1.f5', 'tega_id': 'GlobalPlugin1', 'ope': 'PUT'}
+{'instance': '%GlobalPlugin1.date', 'path': 'inventory.ne1.f6', 'tega_id': 'GlobalPlugin1', 'ope': 'PUT'}
+@1452522994.876741:!
+?
+{'instance': 'test', 'path': 'a.b.c', 'tega_id': 'ca7525be-e255-4a09-ae12-7156225cce51', 'ope': 'PUT'}
+@1452523050.6779933:!

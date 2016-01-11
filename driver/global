@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+./server -p 8888 -d ./var -t global -e $GOPATH/src/github.com/araobp/tega/plugins/global
+
