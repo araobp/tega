@@ -1,5 +1,7 @@
 ##Tega driver for golang
 
+Note: Tega driver for Pytyon is [here](../tega/driver).
+
 ```
  [tega server] <----- CRUD/DCN(HTTP/WebSocket) ------> [driver for golang]
 ```
