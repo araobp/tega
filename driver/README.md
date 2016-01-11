@@ -1,12 +1,13 @@
 ##Tega driver for golang
 
-Note: Tega driver for Pytyon is [here](../tega/driver).
+Note: Tega driver for Python is [here](../tega/driver).
 
+##Test environment
 ```
  [tega server] <----- CRUD/DCN(HTTP/WebSocket) ------> [driver for golang]
 ```
 
-##Preparation
+###Preparation
 Append the following line to your $HOME/.bashrc:
 ```
 export PYTHONPATH=$GOPATH/src/github.com/araobp/tega:$PYTHONPATH
