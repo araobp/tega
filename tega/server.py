@@ -307,6 +307,12 @@ class PubSubHandler(tornado.websocket.WebSocketHandler):
         self.parser = build_parser('server')
         self.tega_id = None
 
+    def check_origin(self, origin):
+        '''
+        Overrides Tornado's "check_origin" method to disable WebSocket origin check
+        '''
+        return True
+
     def open(self, *args):
         '''
         WebSocket open.

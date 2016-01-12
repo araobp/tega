@@ -3,90 +3,157 @@ package driver
 import (
 	_ "bytes"
 	"encoding/json"
+	"fmt"
+	"golang.org/x/net/websocket"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 )
 
+// Session-related constants
 const (
 	TEGA_ID = "anonymous"
 	HOST    = "localhost"
 	PORT    = 8888
 )
 
+// CRUD-related constants
+const (
+	GET    = "GET"
+	PUT    = "PUT"
+	DELETE = "DELETE"
+)
+
+// Tega protocol over WebSocket
+const (
+	SESSION = "SESSION"
+)
+
+// Subscribe mode
+const (
+	LOCAL  = "local"
+	GLOBAL = "global"
+	SYNC   = "sync"
+)
+
+const (
+	WEBSOCKET_PUBSUB_URL = "ws://%s:%s/_pubsub"
+	ORIGIN_URL           = "http://%s/"
+)
+
+// Tega operation
 type Operation struct {
-	TegaId  string
-	Host    string
-	Port    int
-	path    string
-	version int
+	tegaId     string
+	host       string
+	port       int
+	version    int
+	path       string
+	ws         *websocket.Conn
+	subscriber Subscriber
 }
 
-func NewOperation() *Operation {
-	return &Operation{
-		TegaId:  TEGA_ID,
-		Host:    HOST,
-		Port:    PORT,
-		path:    "",
-		version: -1,
+// Subscriber interface for call back functions on NOTIFY
+type Subscriber interface {
+	OnNotify(interface{})
+}
+
+// Returns a default Operation
+func NewOperation(tegaId string, host string, port int, subscriber Subscriber) (*Operation, error) {
+
+	var ope *Operation
+
+	if tegaId == "" {
+		tegaId = TEGA_ID
 	}
+	if host == "" {
+		host = HOST
+	}
+	if port == 0 {
+		port = PORT
+	}
+
+	url := fmt.Sprintf(WEBSOCKET_PUBSUB_URL, host, strconv.Itoa(port))
+	origin := fmt.Sprintf(ORIGIN_URL, host)
+	ws, err := websocket.Dial(url, "", origin)
+	if err == nil {
+		session := strings.Join([]string{SESSION, tegaId, LOCAL}, " ")
+		_, err = ws.Write([]byte(session))
+		if err == nil {
+			ope = &Operation{
+				tegaId:     tegaId,
+				host:       host,
+				port:       port,
+				version:    -1,
+				path:       "",
+				ws:         ws,
+				subscriber: subscriber,
+			}
+		}
+	}
+
+	return ope, err
 }
 
 func (ope *Operation) urlEncode() *string {
 	values := url.Values{}
-	/*
-		if ope.instance != nil {
-			jsonValue, err := json.Marshal(ope.instance)
-			if err == nil {
-				values.Add("instance", bytes.NewBuffer(jsonValue).String())
-			} else {
-				log.Print(err)
-			}
-		}
-	*/
 	if ope.version >= 0 {
 		version := strconv.Itoa(ope.version)
 		values.Add("version", version)
 	}
-	values.Add("tega_id", ope.TegaId)
+	values.Add("tega_id", ope.tegaId)
 	path := strings.Replace(ope.path, ".", "/", -1)
-	url := "http://" + ope.Host + ":" + strconv.Itoa(ope.Port) + "/" + path + "/?" + values.Encode()
+	url := "http://" + ope.host + ":" + strconv.Itoa(ope.port) + "/" + path + "/?" + values.Encode()
 	return &url
 }
 
-func (ope *Operation) Get(path string, version int, instance interface{}) {
+// CRUD read operation
+func (ope *Operation) Get(path string, instance interface{}) error {
 	ope.path = path
-	ope.version = version
 	url := ope.urlEncode()
 	resp, err := http.Get(*url)
 	defer resp.Body.Close()
 	var body []byte
-	if err != nil {
-		log.Print(err)
-	} else {
+	if err == nil {
 		body, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Print(err)
+		if err == nil {
+			err = json.Unmarshal(body, instance)
 		}
 	}
-	err = json.Unmarshal(body, instance)
-	if err != nil {
-		log.Print(err)
-	}
+	return err
 }
 
-/*
-func (ope *Operation) Put(path string, instance interface{}) {
+// CRUD create/update operation
+func (ope *Operation) Put(path string, instance interface{}) error {
 	ope.path = path
 	url := ope.urlEncode()
-	body, err := json.Marshal(instance)
-	if err != nil {
-		log.Print(err)
-	} else {
-		resp, err := http.Put(*url)
+	var err error = nil
+	var body []byte
+	body, err = json.Marshal(instance)
+	if err == nil {
+		client := &http.Client{}
+		var request *http.Request
+		var response *http.Response
+		request, err = http.NewRequest(PUT, *url, strings.NewReader(string(body)))
+		response, err = client.Do(request)
+		defer response.Body.Close()
 	}
+	return err
 }
-*/
+
+// CRUD delete operation
+func (ope *Operation) Delete(path string) error {
+	ope.path = path
+	url := ope.urlEncode()
+	var err error = nil
+	if err == nil {
+		client := &http.Client{}
+		var request *http.Request
+		var response *http.Response
+		request, err = http.NewRequest(DELETE, *url, nil)
+		response, err = client.Do(request)
+		defer response.Body.Close()
+	}
+	return err
+}
