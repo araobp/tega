@@ -3,6 +3,7 @@ package driver
 import (
 	"log"
 	"testing"
+	"time"
 )
 
 type A struct {
@@ -22,14 +23,12 @@ func (r *Self) OnNotify(v interface{}) {
 
 var self *Self
 var ope *Operation
+var ope2 *Operation
 
 func TestMain(t *testing.T) {
 	self = &Self{}
-	var err error
-	ope, err = NewOperation("", "", 0, self)
-	if err != nil {
-		log.Fatal(err)
-	}
+	ope, _ = NewOperation("", "", 0, self)
+	ope2, _ = NewOperation("anonymous2", "", 0, self)
 	ope.Delete("a")
 	body := "test"
 	ope.Put("a.b.c", &body)
@@ -65,4 +64,18 @@ func TestPut(t *testing.T) {
 	if err != nil {
 		log.Print(err)
 	}
+}
+
+func TestSubscribe(t *testing.T) {
+	err := ope.Subscribe("a", LOCAL)
+	if err != nil {
+		log.Print(err)
+	}
+	time.Sleep(1 * time.Second)
+	var body string = "test4"
+	err = ope2.Put("a.b.c", &body)
+	if err != nil {
+		log.Print(err)
+	}
+	time.Sleep(3 * time.Second)
 }

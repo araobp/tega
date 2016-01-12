@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"golang.org/x/net/websocket"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -24,6 +25,12 @@ const (
 	GET    = "GET"
 	PUT    = "PUT"
 	DELETE = "DELETE"
+)
+
+// PUBSUB-related constants
+const (
+	SUBSCRIBE   = "SUBSCRIBE"
+	UNSUBSCRIBE = "UNSUBSCRIBE"
 )
 
 // Tega protocol over WebSocket
@@ -93,7 +100,31 @@ func NewOperation(tegaId string, host string, port int, subscriber Subscriber) (
 		}
 	}
 
+	go ope.wsReader()
+
 	return ope, err
+}
+
+func (ope *Operation) wsReader() {
+	var err error
+	for {
+		var notify string
+		err = nil
+		err = websocket.Message.Receive(ope.ws, &notify)
+		if err == nil {
+			msg := strings.Split(notify, "\n")[1]
+			//log.Print(msg)
+			// TODO: this impl is tentative
+			var data interface{}
+			err = json.Unmarshal([]byte(msg), &data)
+			if err == nil {
+				ope.subscriber.OnNotify(data)
+			}
+		}
+		if err != nil {
+			log.Print(err)
+		}
+	}
 }
 
 func (ope *Operation) urlEncode() *string {
@@ -155,5 +186,19 @@ func (ope *Operation) Delete(path string) error {
 		response, err = client.Do(request)
 		defer response.Body.Close()
 	}
+	return err
+}
+
+// Sends SUBSCRIBE to tega server
+func (ope *Operation) Subscribe(path string, scope string) error {
+	subscribe := strings.Join([]string{SUBSCRIBE, path, scope}, " ")
+	_, err := ope.ws.Write([]byte(subscribe))
+	return err
+}
+
+// Sends UNSUBSCRIBE to tega server
+func (ope *Operation) Unsubscribe(path string) error {
+	unsubscribe := strings.Join([]string{UNSUBSCRIBE, path}, " ")
+	_, err := ope.ws.Write([]byte(unsubscribe))
 	return err
 }
