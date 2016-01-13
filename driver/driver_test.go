@@ -17,8 +17,11 @@ type B struct {
 type Self struct {
 }
 
-func (r *Self) OnNotify(v interface{}) {
-	log.Print(v)
+func (r *Self) OnNotify(v *[]Notify) {
+	log.Print("Notify: %s", *v)
+	for _, i := range *v {
+		log.Printf("Notify.Instance: %s", i.Instance.(string))
+	}
 }
 
 var self *Self
@@ -77,5 +80,11 @@ func TestSubscribe(t *testing.T) {
 	if err != nil {
 		log.Print(err)
 	}
-	time.Sleep(3 * time.Second)
+	time.Sleep(1 * time.Second)
+	body = "test5"
+	err = ope2.Put("a.b.x", &body)
+	if err != nil {
+		log.Print(err)
+	}
+	time.Sleep(1 * time.Second)
 }

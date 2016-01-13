@@ -61,9 +61,17 @@ type Operation struct {
 	subscriber Subscriber
 }
 
+// NOTIFY message from tega server
+type Notify struct {
+	TegaId   string      `json:"tega_id"`
+	Ope      string      `json:"ope"`
+	Path     string      `json:"path"`
+	Instance interface{} `json:"instance"`
+}
+
 // Subscriber interface for call back functions on NOTIFY
 type Subscriber interface {
-	OnNotify(interface{})
+	OnNotify(*[]Notify)
 }
 
 // Returns a default Operation
@@ -113,12 +121,10 @@ func (ope *Operation) wsReader() {
 		err = websocket.Message.Receive(ope.ws, &notify)
 		if err == nil {
 			msg := strings.Split(notify, "\n")[1]
-			//log.Print(msg)
-			// TODO: this impl is tentative
-			var data interface{}
-			err = json.Unmarshal([]byte(msg), &data)
+			n := &[]Notify{}
+			err = json.Unmarshal([]byte(msg), n)
 			if err == nil {
-				ope.subscriber.OnNotify(data)
+				ope.subscriber.OnNotify(n)
 			}
 		}
 		if err != nil {
