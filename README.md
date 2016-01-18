@@ -3,7 +3,14 @@ tega db
 
 Project start: 2014/8/8
 
-MD-SAL-like database for small PCs (incl. Raspberry Pi), written in Python.
+MD-SAL-like database for small PCs (incl. Raspberry Pi), written in Python:
+- Tornado-based
+- CRUD/RPC supported
+- Transaction supported
+- JSON-oriented (not YANG)
+- Schema-less
+- Extensible with plugins
+- NAT traversal (HTTP/WebSocket)
 
 Project goal
 ------------
