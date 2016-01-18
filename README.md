@@ -35,7 +35,7 @@ $ git clone http://github.com/araobp/tega
 $ pip3 install tornado
 $ pip3 install httplib2
 $ pip3 install pyyaml
-$ mkdir ~/tega/var
+$ mkdir tega/scripts/var
 ```
 
 Append the following line to your ~/.bashrc
@@ -45,7 +45,7 @@ export PYTHONPATH=$PYTHONPATH:$HOME/tega
 
 Start tega server like this:
 ```
-$ cd ~/tega/scripts
+$ cd tega/scripts
 $ ./global
 ```
 
@@ -56,7 +56,7 @@ $ pip3 install backports_abc
 
 Test tega CLI:
 ```
-$ cd ~/tega/scripts
+$ cd tega/scripts
 $ ./cli
 ```
 
