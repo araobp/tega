@@ -3,7 +3,7 @@ tega db
 
 Project start: 2014/8/8
 
-An experimental project to study model-driven data base.
+MD-SAL-like database for small PCs (incl. Raspberry Pi), written in Python.
 
 Project goal
 ------------
