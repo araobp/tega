@@ -118,12 +118,17 @@ def process_cmd(tornado_loop=False):
         print(driver.tega_id)
     elif cmd in ('clear', 'roots', 'old',
             'sync', 'log', 'channels', 'subscribers', 'ids',
-            'global', 'forwarders', 'plugins', 'ss'):
+            'global', 'forwarders', 'plugins'):
         status, reason, data = getattr(driver, cmd)()
         if data:
             print(yaml.dump(data))
         else:
             print('{} {}'.format(status, reason))
+
+    elif cmd == 'ss':
+        status, reason, data = getattr(driver, cmd)()
+        print('{} {}'.format(status, reason))
+
     elif cmd == 'begin':
         try:
             txid = getattr(driver, cmd)()

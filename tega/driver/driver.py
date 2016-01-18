@@ -99,7 +99,7 @@ class Driver(object):
             self._tega_id = str(uuid.uuid4())
 
         for cmd in ('log', 'roots', 'old', 'channels', 'subscribers',
-                    'ids', 'global', 'forwarders', 'plugins', 'ss'):
+                    'ids', 'global', 'forwarders', 'plugins'):
             setattr(self, cmd, self._build_cmd(cmd))
 
     @property
@@ -145,6 +145,13 @@ class Driver(object):
         if body:
             body = json.loads(body.decode('utf-8'))
         return (response.status, response.reason, body)
+
+    def ss(self):
+        '''
+        Saves a snapshot
+        '''
+        response, body = self._mgmt_cmd('ss', tega_id=self.tega_id)
+        return (response.status, response.reason, None)
 
     def rollback(self, root_oid, backto):
         '''
