@@ -3,7 +3,14 @@ tega db
 
 Project start: 2014/8/8
 
-An experimental project to study model-driven data base.
+MD-SAL-like database for small PCs (incl. Raspberry Pi), written in Python:
+- Tornado-based
+- CRUD/RPC supported
+- Transaction supported
+- JSON-oriented (not YANG)
+- Schema-less or protobuf
+- Extensible with plugins
+- NAT traversal (HTTP/WebSocket)
 
 Project goal
 ------------
@@ -28,7 +35,7 @@ $ git clone http://github.com/araobp/tega
 $ pip3 install tornado
 $ pip3 install httplib2
 $ pip3 install pyyaml
-$ mkdir ~/tega/var
+$ mkdir tega/scripts/var
 ```
 
 Append the following line to your ~/.bashrc
@@ -38,7 +45,7 @@ export PYTHONPATH=$PYTHONPATH:$HOME/tega
 
 Start tega server like this:
 ```
-$ cd ~/tega/scripts
+$ cd tega/scripts
 $ ./global
 ```
 
@@ -49,7 +56,7 @@ $ pip3 install backports_abc
 
 Test tega CLI:
 ```
-$ cd ~/tega/scripts
+$ cd tega/scripts
 $ ./cli
 ```
 
@@ -80,6 +87,12 @@ Requirements
 - httplib2
 - pyyaml
 - enum34(<= python3.2)
+
+If you want to use protobuf as a schema lang for tega, you need to install "protobuf". Download the package from [here](
+https://pypi.python.org/pypi/protobuf/3.0.0b2). Then install the package:
+```
+$ python3.4 setup.py install
+````
 
 TODO(2016/01/10)
 ----
