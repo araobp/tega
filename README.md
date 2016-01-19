@@ -8,7 +8,7 @@ MD-SAL-like database for small PCs (incl. Raspberry Pi), written in Python:
 - CRUD/RPC supported
 - Transaction supported
 - JSON-oriented (not YANG)
-- Schema-less
+- Schema-less or protobuf
 - Extensible with plugins
 - NAT traversal (HTTP/WebSocket)
 
@@ -87,6 +87,12 @@ Requirements
 - httplib2
 - pyyaml
 - enum34(<= python3.2)
+
+If you want to use protobuf as a schema lang for tega, you need to install "protobuf". Download the package from [here](
+https://pypi.python.org/pypi/protobuf/3.0.0b2). Then install the package:
+```
+$ python3.4 setup.py install
+````
 
 TODO(2016/01/10)
 ----
