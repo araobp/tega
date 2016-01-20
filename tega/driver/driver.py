@@ -263,7 +263,7 @@ class Driver(object):
             response, body = self.conn.request(url, POST, None, HEADERS)
             status = response.status
             json_data = body.decode('utf-8')
-            if pythond_dict:
+            if python_dict:
                 return json.loads(json_data)
             else:
                 return dict2cont(json_data)
