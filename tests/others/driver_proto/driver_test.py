@@ -23,7 +23,8 @@ if __name__ == '__main__':
 
     driver.put_proto(path="address_book", message=address_book)
 
-    person = driver.get_proto(path="address_book", template=person_pb2.AddressBook())
+    persons = driver.get_proto(path="address_book", template=person_pb2.AddressBook())
+    print(persons)
 
     ### Cont ###
 
@@ -38,4 +39,5 @@ if __name__ == '__main__':
     driver.put(person)
 
     persons = driver.get(path="address_book2", python_dict=True)
+    print(persons)
 
