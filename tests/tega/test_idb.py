@@ -70,7 +70,7 @@ class TestSequence(unittest.TestCase):
             inventory.ne2.name = 'NE2'
             t.put(inventory)
             inventory.ne1.weather = 'fine'
-            t.put(inventory)
+            t.put('inventory')
 
         # ver 2
         with tega.idb.tx(subscriber=self.subscriber) as t:

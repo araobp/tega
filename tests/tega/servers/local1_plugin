@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
 
-$1/server -p 8889 -d $1 -H localhost -P 8888 -S inventory.ne1 -s -t local1 -e ~/tega/plugins/local1
+PLUGINS=../../../pluging
+
+$1/server -p 8889 -d $1 -H localhost -P 8888 -S inventory.ne1 -s -t local1 -e $PLUGINS

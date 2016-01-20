@@ -746,7 +746,7 @@ def reload_log():
 
     _log_fd.seek(0)
     for line in _log_fd:
-        line.rstrip('\n')
+        line = line.rstrip('\n')
         if line.startswith(ROLLBACK_MARKER):
             args = line.split(' ')
             rollback(args[1], int(args[0]), write_log=False)

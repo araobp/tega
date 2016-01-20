@@ -73,7 +73,7 @@ forwarders              show subscribe forwarders
 
 [RPC]
 For example, type a command like this:
-a.b.x(1, name='Alice')
+a.b.x(1,name='Alice')
 
 '''
 
@@ -138,7 +138,7 @@ def process_cmd(tornado_loop=False):
 
     elif cmd == 'cand':
         try:
-            data = driver.cand(json_format=True)
+            data = driver.cand(python_dict=True)
             print(data)
         except TransactionException as e:
             print(e)
@@ -221,7 +221,7 @@ def process_cmd(tornado_loop=False):
                         kwargs['channel'] = path 
                         kwargs['message'] = body 
                     elif ope == 'get' or ope == 'geta':
-                        kwargs['json_format'] = True
+                        kwargs['python_dict'] = True
                         kwargs['path'] = path
                     else:
                         kwargs['path'] = path

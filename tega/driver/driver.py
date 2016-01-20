@@ -5,14 +5,14 @@ from tega.idb import OPE
 from tega.messaging import build_parser
 from tega.subscriber import SCOPE
 from tega.tree import Cont
-from tega.util import instance2url, path2url, subtree
+from tega.util import instance2url, path2url, subtree, dict2cont
 
 import httplib2
 import json
 import tornado
 import uuid
 import urllib
-from google.protobuf import json_format as proto
+from google.protobuf import json_format
 
 POST = OPE.POST.name 
 PUT = OPE.PUT.name 
@@ -191,7 +191,7 @@ class Driver(object):
         '''
         url = self._urlencode(path2url(path), txid=self.txid,
                              version=version, tega_id=self.tega_id)
-        body_json = proto.MessageToJson(message) 
+        body_json = json_format.MessageToJson(message) 
         response, body = self.conn.request(url, PUT, body_json, HEADERS)
         self._response_check(response)
 
@@ -204,7 +204,7 @@ class Driver(object):
         response, body = self.conn.request(url, DELETE, None, HEADERS)
         self._response_check(response)
 
-    def get(self, path, version=None, internal=False, json_format=False):
+    def get(self, path, version=None, internal=False, python_dict=False):
         '''
         CRUD read operation
         '''
@@ -216,7 +216,11 @@ class Driver(object):
         if response.status >= 300 or response.status < 200:
             raise CRUDException('{} {}'.format(response.status, response.reason))
 
-        return self._decode(body, json_format)
+        dict_data = json.loads(body.decode('utf-8'))
+        if python_dict:
+            return dict_data  # Returns Dict
+        else:
+            return subtree(path, dict_data)  # Returns Cont
 
     def get_proto(self, path, template, version=None, internal=False):
         '''
@@ -230,14 +234,7 @@ class Driver(object):
         if response.status >= 300 or response.status < 200:
             raise CRUDException('{} {}'.format(response.status, response.reason))
 
-        return proto.Parse(body, template)
-
-    def _decode(self, body, json_format=False):
-        data = json.loads(body.decode('utf-8'))
-        if json_format:
-            return data
-        else:
-            return subtree(path, data)
+        return json_format.Parse(body, template)
 
     def begin(self):
         '''
@@ -257,7 +254,7 @@ class Driver(object):
             raise TransactionException(
                     'id: {} not commited yet!'.format(self.txid))
 
-    def cand(self, internal=False, json_format=False):
+    def cand(self, internal=False, python_dict=False):
         '''
         Candidate config.
         '''
@@ -265,7 +262,11 @@ class Driver(object):
             url = self._cmdencode('cand', txid=self.txid, internal=internal)
             response, body = self.conn.request(url, POST, None, HEADERS)
             status = response.status
-            return self._decode(body, json_format)
+            json_data = body.decode('utf-8')
+            if pythond_dict:
+                return json.loads(json_data)
+            else:
+                return dict2cont(json_data)
         else:
             raise TransactionException('no ongoing transaction')
 
