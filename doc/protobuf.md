@@ -7,7 +7,6 @@ import tega.driver as driver
 from tega.tree import Cont
 
 import person_pb2
-import person_pb2
 
 if __name__ == '__main__':
 
