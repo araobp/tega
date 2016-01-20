@@ -8,7 +8,7 @@ import subprocess
 import time
 
 script_dir = os.getcwd() + '/servers'
-#print('script dir: ' + script_dir)
+print('script dir: ' + script_dir)
 
 class TestSequence(unittest.TestCase):
 
