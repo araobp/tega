@@ -128,7 +128,7 @@ func (ope *Operation) wsReader() {
 			}
 		}
 		if err != nil {
-			log.Print(err)
+			log.Fatal(err)
 		}
 	}
 }
