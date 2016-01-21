@@ -74,7 +74,7 @@ class TestSequence(unittest.TestCase):
 
         # ver 2
         with tega.idb.tx(subscriber=self.subscriber) as t:
-            t.delete(inventory)
+            t.delete('inventory')
 
     def test_is_started(self):
         self.assertTrue(tega.idb.is_started())

@@ -1,6 +1,7 @@
 from tega.frozendict import frozendict
 
 import copy
+import os
 
 def path2qname(path):
     '''
@@ -168,4 +169,18 @@ def is_func(str_value):
         return True
     else:
         return False
+
+def newest_commit_log(server_tega_id, dir_):
+    '''
+    Returns the newest commit log number
+    '''
+    max_ = 0
+    list_ = os.listdir(dir_)
+    for n in list_:
+        s = n.split('.')
+        if s[0] == 'log':
+            num = int(s[-1])
+            if num > max_:
+                max_ = num
+    return max_
 

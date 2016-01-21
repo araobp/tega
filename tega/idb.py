@@ -1,7 +1,7 @@
 from tega.subscriber import SCOPE
 from tega.messaging import request, REQUEST_TYPE
 from tega.tree import Cont, RPC
-from tega.util import path2qname, qname2path, subtree
+from tega.util import path2qname, qname2path, dict2cont, subtree, newest_commit_log
 
 import copy
 from enum import Enum
@@ -23,10 +23,11 @@ SYNC_CONFIRMED_MARKER = '*'
 
 _idb = {}  # in-memory DB
 _old_roots = {}  # old roots at every version
-log_fd = None
-snapshot_file = None 
+_log_dir = None  # Log directory
+_log_fd = None  # Log file descriptor
 _log_cache = []  # log cache
 
+server_tega_id = None  # Server's tega ID
 tega_ids = set()  # tega IDs of subscribers and plugins
 channels = {}  # channels subscribed by subscribers
 global_channels = {}  # channels belonging to global or sync scope
@@ -65,21 +66,22 @@ def start(data_dir, tega_id):
     '''
     Starts tega db
     '''
-    global log_fd, snapshot_file
-    seq_no = 0  # TODO: increment
-    _dir = os.path.join(os.path.expanduser(data_dir))
-    log_file_name = 'log.{}.{}'.format(tega_id, seq_no)
-    snapshot_file_name = 'snapshot.{}.'.format(tega_id)
-    log_file = os.path.join(_dir, log_file_name)
-    snapshot_file = os.path.join(_dir, snapshot_file_name)
-    log_fd = open(log_file, 'a+')  # append-only file
+    global _log_fd
+    global _log_dir
+    global server_tega_id
+    server_tega_id = tega_id
+    _log_dir = os.path.join(os.path.expanduser(data_dir))
+    seq_no = newest_commit_log(server_tega_id, _log_dir)
+    log_file_name = 'log.{}.{}'.format(server_tega_id, seq_no)
+    log_file = os.path.join(_log_dir, log_file_name)
+    _log_fd = open(log_file, 'a+')  # append-only file
 
 def is_started():
     '''
     True if a log file has already been opened.
     '''
-    global log_fd
-    if log_fd and not log_fd.closed:
+    global _log_fd
+    if _log_fd and not _log_fd.closed:
         return True
     else:
         return False
@@ -88,17 +90,17 @@ def stop():
     '''
     Stops tega db
     '''
-    global log_fd
-    if log_fd:
-        log_fd.close()
+    global _log_fd
+    if _log_fd:
+        _log_fd.close()
 
 def clear():
     '''
     Empties tega-db file and in-memory DB
     '''
     global _idb, _old_roots, _log_cache
-    log_fd.seek(0)
-    log_fd.truncate()
+    _log_fd.seek(0)
+    _log_fd.truncate()
     _idb = {}
     _old_roots = {}
     _log_cache = []
@@ -226,6 +228,12 @@ def is_subscribe_forwarder(tega_id):
             return True
     return False
 
+def log_entry(ope, path, tega_id, instance):
+    '''
+    Log entry
+    '''
+    return dict(ope=ope, path=path, tega_id=tega_id, instance=instance)
+
 class tx:
     '''
     tega-db transaction 
@@ -352,15 +360,14 @@ class tx:
                                                           self.policy.value)
             _log_cache.append(COMMIT_START_MARKER)
             if write_log:  # Writes log
-                if log_fd:
-                    log_fd.write(COMMIT_START_MARKER+'\n')  # commit start
+                if _log_fd:
+                    _log_fd.write(COMMIT_START_MARKER+'\n')  # commit start
                     for log in self.commit_queue:
-                        data = log['instance']
                         log = str(log)
-                        log_fd.write(log+'\n')
-                    log_fd.write(finish_marker+'\n')  # commit finish marker
-                    log_fd.flush()
-                    os.fsync(log_fd)
+                        _log_fd.write(log+'\n')
+                    _log_fd.write(finish_marker+'\n')  # commit finish marker
+                    _log_fd.flush()
+                    os.fsync(_log_fd)
                 # Notifies the commited transaction to subscribers
                 for log in self.commit_queue:
                     self._notify_append(log)
@@ -397,7 +404,7 @@ class tx:
         if instance and isinstance(instance, Cont):
             instance = instance.serialize_()
 
-        self.commit_queue.append(dict(ope=ope.name, path=path, tega_id=tega_id,
+        self.commit_queue.append(log_entry(ope=ope.name, path=path, tega_id=tega_id,
                                  instance=instance))
 
     def get(self, path, version=None, tega_id=None):
@@ -682,10 +689,10 @@ def rollback(root_oid, backto, write_log=True):
     root = pair[1]
     _idb[root_oid] = root
     marker_rollback = '{} {}'.format(str(backto), root_oid)
-    if log_fd and write_log:
-        log_fd.write(marker_rollback+'\n')
-        log_fd.flush()
-        os.fsync(log_fd)
+    if _log_fd and write_log:
+        _log_fd.write(marker_rollback+'\n')
+        _log_fd.flush()
+        os.fsync(_log_fd)
     _log_cache.append(marker_rollback)
 
 def create_index(path):
@@ -737,9 +744,9 @@ def reload_log():
     t = None 
     multi = []
 
-    log_fd.seek(0)
-    for line in log_fd:
-        line.rstrip('\n')
+    _log_fd.seek(0)
+    for line in _log_fd:
+        line = line.rstrip('\n')
         if line.startswith(ROLLBACK_MARKER):
             args = line.split(' ')
             rollback(args[1], int(args[0]), write_log=False)
@@ -767,7 +774,10 @@ def reload_log():
             instance = log['instance']
             tega_id = log['tega_id']
             if ope == OPE.PUT.name:
-                root = subtree(path, instance)
+                if path:
+                    root = subtree(path, instance)
+                else:
+                    root = dict2cont(instance)
                 multi.append((OPE.PUT.name, root, tega_id))
             elif ope == OPE.DELETE.name:
                 multi.append((OPE.DELETE.name, path, tega_id))
@@ -896,9 +906,9 @@ def sync_confirmed(url, sync_path, version, sync_ver):
     '''
     confirmed = dict(url=url, sync_path=sync_path, version=version, sync_ver=sync_ver)
     marker_confirmed = '{}{}'.format(SYNC_CONFIRMED_MARKER, confirmed)
-    log_fd.write(marker_confirmed+'\n')
-    log_fd.flush()
-    os.fsync(log_fd)
+    _log_fd.write(marker_confirmed+'\n')
+    _log_fd.flush()
+    os.fsync(_log_fd)
     _log_cache.append(marker_confirmed)
     logging.debug('sync confirmed - \n{}\n'.format(json.dumps(marker_confirmed)))
 
@@ -908,24 +918,35 @@ def sync_confirmed_server(tega_id, sync_path, version, sync_ver):
     '''
     confirmed = dict(tega_id=tega_id, sync_path=sync_path, version=version, sync_ver=sync_ver)
     marker_confirmed = '{}{}'.format(SYNC_CONFIRMED_MARKER, confirmed)
-    log_fd.write(marker_confirmed+'\n')
-    log_fd.flush()
-    os.fsync(log_fd)
+    _log_fd.write(marker_confirmed+'\n')
+    _log_fd.flush()
+    os.fsync(_log_fd)
     _log_cache.append(marker_confirmed)
     logging.debug('sync confirmed - \n{}\n'.format(json.dumps(marker_confirmed)))
 
-def save_snapshot():
+def save_snapshot(tega_id):
     '''
-    Take a snapshot of _idb and saves it to the harddisk.
+    Take a snapshot of _idb and saves it to the hard disk.
     '''
-    global snapshot_file
-    seq_no = 0  # TODO: increment
+    seq_no = newest_commit_log(server_tega_id, _log_dir) + 1  # Increments the log seq number
     _idb_snapshot = {}
     for root_oid in _idb:
         _idb_snapshot[root_oid] = _idb[root_oid].serialize_(internal=True)
-    _snapshot_file = snapshot_file + str(seq_no)
-    with open(_snapshot_file, 'w') as f:
-        f.write(str(_idb_snapshot))
+
+    log_file_name = 'log.{}.{}'.format(server_tega_id, seq_no)
+    log_file = os.path.join(_log_dir, log_file_name)
+    _log_fd = open(log_file, 'a+')  # append-only file
+
+    finish_marker = COMMIT_FINISH_MARKER+'{}:{}'.format(time.time(), POLICY.RAISE_EXCEPTION.value)  # TODO: is raise_exception OK?
+
+    _log_fd.write(COMMIT_START_MARKER+'\n')  # commit start
+    for root_oid, instance in _idb_snapshot.items():
+        log = log_entry(ope=OPE.PUT.name, path=root_oid, tega_id=tega_id, instance=instance)
+        log = str(log)
+        _log_fd.write(log+'\n')
+    _log_fd.write(finish_marker+'\n')  # commit finish marker
+    _log_fd.flush()
+    os.fsync(_log_fd)
 
 def _build_scope_matcher(sync_path):
     '''

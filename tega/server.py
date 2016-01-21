@@ -136,6 +136,9 @@ class ManagementRestApiHandler(tornado.web.RequestHandler):
                     raise tornado.web.HTTPError(404)
         elif cmd == 'sync':
             _sync_request(mhost, mport, sync_path)
+        elif cmd == 'ss':
+            tega_id = self.get_argument('tega_id', None)
+            tega.idb.save_snapshot(tega_id)
 
     def get(self, cmd):
         if cmd  in ('roots', 'old'):
@@ -174,8 +177,6 @@ class ManagementRestApiHandler(tornado.web.RequestHandler):
                 _plugins[v.tega_id] = v.scope.value
             self.write(json.dumps(_plugins))
             self.set_header('Content-Type', 'application/json')
-        elif cmd == 'ss':
-            tega.idb.save_snapshot()
 
 class SyncApiHandler(tornado.web.RequestHandler):
     '''
