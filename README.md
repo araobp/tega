@@ -94,6 +94,10 @@ https://pypi.python.org/pypi/protobuf/3.0.0b2). Then install the package:
 $ python3.4 setup.py install
 ````
 
+Documentation
+-------------
+- [Using protobuf](./doc/protobuf.md)
+
 TODO(2016/01/10)
 ----
 - develop tega driver for golang
