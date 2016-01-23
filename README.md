@@ -99,6 +99,7 @@ Documentation
 - [tree structure](./doc/tree.png)
 - [tega message format](./doc/message-format.md)
 - [tega db format](./doc/tega-db-format.md)
+- [sync path and notifications](./doc/sync_path_and_notifications.md)
 - [subscription scope](./doc/subscription_scope.md)
 - [Using protobuf](./doc/protobuf.md)
 
