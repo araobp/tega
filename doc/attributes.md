@@ -45,9 +45,9 @@ RPC class inherits all the attributes of Cont with an additional attribute as fo
 
 ##Cont value: python built-in types
 
-Built-in types are wrapped by wrapped_* classes. The main purpose of wrapping built-in classes is for version control.
+Built-in types are wrapped with wrapped_* classes. The main purpose of wrapping built-in classes is for version control.
 
-For example, "str" is wrapped by "wrapped_str" class.
+For example, "str" is wrapped with "wrapped_str" class.
 
 Note that those wrapped_* clases do not inherig Cont class.
 
@@ -59,7 +59,7 @@ root.__dict__['a'] --> a.__dict__['b'] --> b.__dict__['c'] --> wrapped object
 
 ##Cont value: function
 
-Functions are wrapped by RPC class that is a child class of Cont.
+Functions are wrapped with RPC class that is a child class of Cont.
 ```
 root.a.b.c = Func
 Chained objects
@@ -68,7 +68,7 @@ root.__dict__['a'] --> a.__dict__['b'] --> b.__dict__['c'] --> RPC.__dict__['_ob
 
 ##Cont attribute: _parent
 
-_parent points to its parent. You can reach to its root parent by tarversing on _parent attributes recursively. 
+_parent points to its parent. You can reach its root parent by tarversing on _parent attributes recursively. 
 ```
 root.a.b.c returns c
 c.__dict__['_parent'] -- points to --> b
