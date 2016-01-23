@@ -12,6 +12,13 @@ MD-SAL-like database for small PCs (incl. Raspberry Pi), written in Python:
 - Extensible with plugins
 - NAT traversal (HTTP/WebSocket)
 
+Design policy
+-------------
+- Simplicity rather than high-performance and rigid schema
+- NOSQL for non big data (small data)
+- Embeddabled data base
+- Easy-to-use APIs
+
 Project goal
 ------------
 ![goal](https://docs.google.com/drawings/d/1CVeMUwvrKnbgvjriW0ftwnIMtjiMDlDMCEN0tPTSujs/pub?w=640&h=480)
