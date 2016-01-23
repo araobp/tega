@@ -105,6 +105,7 @@ $ python3.4 setup.py install
 Documentation
 -------------
 - [tree structure](./doc/tree.png)
+- [tree structure implemention: Cont class and its attributes](./doc/attributes.md)
 - [tega message format](./doc/message-format.md)
 - [tega db format](./doc/tega-db-format.md)
 - [sync path and notifications](./doc/sync_path_and_notifications.md)
