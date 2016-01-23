@@ -18,6 +18,7 @@ Design policy
 - NOSQL for non big data (small data)
 - Embeddabled data base
 - Easy-to-use APIs
+- Concurrenty support with coroutine
 
 Project goal
 ------------
