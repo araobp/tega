@@ -96,6 +96,10 @@ $ python3.4 setup.py install
 
 Documentation
 -------------
+- [tree structure](./doc/tree.png)
+- [tega message format](./doc/message-format.md)
+- [tega db format](./doc/tega-db-format.md)
+- [subscription scope](./doc/subscription_scope.md)
 - [Using protobuf](./doc/protobuf.md)
 
 TODO(2016/01/10)
