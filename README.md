@@ -16,7 +16,7 @@ Design policy
 -------------
 - Simplicity rather than high-performance and rigid schema
 - NOSQL for non big data (small data)
-- Embeddabled data base
+- Embeddable data base
 - Easy-to-use APIs
 - Concurrenty support with coroutine
 
