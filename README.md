@@ -20,6 +20,10 @@ Design policy
 - Easy-to-use APIs
 - Concurrenty support with coroutine
 
+Modeling
+--------
+- [Modeling technique](./doc/modeling.md)
+
 Project goal
 ------------
 ![goal](https://docs.google.com/drawings/d/1CVeMUwvrKnbgvjriW0ftwnIMtjiMDlDMCEN0tPTSujs/pub?w=640&h=480)
