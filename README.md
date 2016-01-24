@@ -20,6 +20,10 @@ Design policy
 - Easy-to-use APIs
 - Concurrenty support with coroutine
 
+Modeling
+--------
+- [Modeling technique](./doc/modeling.md)
+
 Project goal
 ------------
 ![goal](https://docs.google.com/drawings/d/1CVeMUwvrKnbgvjriW0ftwnIMtjiMDlDMCEN0tPTSujs/pub?w=640&h=480)
@@ -105,6 +109,7 @@ $ python3.4 setup.py install
 Documentation
 -------------
 - [tree structure](./doc/tree.png)
+- [tree structure implemention: Cont class and its attributes](./doc/attributes.md)
 - [tega message format](./doc/message-format.md)
 - [tega db format](./doc/tega-db-format.md)
 - [sync path and notifications](./doc/sync_path_and_notifications.md)

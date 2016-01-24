@@ -43,30 +43,34 @@ RPC class inherits all the attributes of Cont with an additional attribute as fo
 |----------|----------------------------------|---------------------------------------------|
 |_value    |Reference to an object            |An instance of Func                          |
 
-##Built-in typesの収容
+##Cont value: python built-in types
 
-Version管理のため、Wrapped classにてbuilt-in typeのobjectを収容する。例えば、strであれば、wrapped_strクラスで収容。wrapped classはContクラスが定義するfunction群のプールで構成され、Contを継承(inherit)しない。
+Built-in types are wrapped with wrapped_* classes. The main purpose of wrapping built-in classes is for version control.
+
+For example, "str" is wrapped with "wrapped_str" class.
+
+Note that those wrapped_* clases do not inherig Cont class.
+
 ```
 root.a.b.c = object
 Chained objects
 root.__dict__['a'] --> a.__dict__['b'] --> b.__dict__['c'] --> wrapped object
 ```
 
-##Functionの収容
+##Cont value: function
 
-Contの子クラスであるRPC classがwrapperとなりFuncを収容する。
+Functions are wrapped with RPC class that is a child class of Cont.
 ```
 root.a.b.c = Func
 Chained objects
 root.__dict__['a'] --> a.__dict__['b'] --> b.__dict__['c'] --> RPC.__dict__['_object'] --> Func
 ```
 
-##_parentの利用目的
+##Cont attribute: _parent
 
-* 任意のoidからQName(Qualified Name)を生成するとき、parent nodeへ向かってrecursiveへoid取得する時に使われる。QNameは内部でしか使用されないため、リスト型で表現する。
-
+_parent points to its parent. You can reach its root parent by tarversing on _parent attributes recursively. 
 ```
-root.a.b.c は c を返す。
+root.a.b.c returns c
 c.__dict__['_parent'] -- points to --> b
 b.__dict__['_parent'] -- points to --> a
 a.__dict__['_parent'] -- points to --> root
@@ -76,7 +80,7 @@ b.qname_() returns ['root', 'a', 'b']
 
 with tx() as t:
 　　root.a.b.c = 1
-  t.put(c) ==> cからqname:['root', 'a', 'b', 'c']をindexとして生成しin-memory DBのtreeを操作
-  t.put(b) ==> cからqname:['root', 'a', 'b']をindexとして生成しin-memory DBのtreeを操作
+  t.put(c) ==> qname:['root', 'a', 'b', 'c'] is generated from c as a path parameter for CRUD operations on tega db
+  t.put(b) ==> qname:['root', 'a', 'b'] is generated from b as a path parameter for CRUD operations on tega db
 
 ```
