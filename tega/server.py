@@ -719,6 +719,7 @@ def main():
             _tega_id = singleton.tega_id
             plugins[_tega_id] = singleton
             tega.idb.add_tega_id(_tega_id)
+            logging.info('plugin attached to idb: {}'.format(singleton.__class__.__name__))
 
     application = tornado.web.Application([
         (r'/_pubsub', PubSubHandler),
