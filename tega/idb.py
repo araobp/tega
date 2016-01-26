@@ -244,7 +244,8 @@ class tx:
         Note: subscriber includes tega_id. The user of this class w/o
         a subscriber client needs to set tega_id.
         '''
-        self.commit_queue = []  # requested crud operations
+        self.crud_queue = []  # requested CRUD operations
+        self.commit_queue = []  # operations to be commited 
         self.candidate = {}  # candidate subtrees in a transaction
         self.txid = str(uuid.uuid4())  # transaction ID
         self.notify_batch = {} 
@@ -284,14 +285,14 @@ class tx:
         Returns a new root and a tail node:
        
         Pattern A
-        [_idb]--[new_root]--[a]--[b]-...-[above_tail]--[tail]
+        [_idb]--[  root  ]--[a]--[b]-...-[above_tail]--[tail]
          (A)      (B)              | copy
                                    V
         [_idb]--[new_root]--[a]--[b]-...-[above_tail]--[tail]
                   (C)
       
         Pattern B
-        [_idb]--[new_root]--[a]--[b] ->X go: False (D)
+        [_idb]--[  root  ]--[a]--[b] ->X go: False (D)
          (A)      (B)        | copy
                              V
         [_idb]--[new_root]--[a]--[b]-...-[above_tail]--[tail]
@@ -354,7 +355,19 @@ class tx:
     def commit(self, write_log=True):
         '''
         Transaction commit
+
+        Note: since this data base is based on Tornado/coroutine,
+        this commit function never interrupted by another process or thread.
         '''
+        for crud in self.crud_queue:
+            func = crud[0]
+            if func:  # put() or delete()
+                crud[0](*crud[1:])
+            else:  # get()
+                qname = crud[1]
+                tega_id = crud[2]
+                self._enqueue_commit(OPE.GET, qname, tega_id, None)
+
         if len(self.commit_queue) > 0:
             finish_marker = COMMIT_FINISH_MARKER+'{}:{}'.format(time.time(),
                                                           self.policy.value)
@@ -368,10 +381,7 @@ class tx:
                     _log_fd.write(finish_marker+'\n')  # commit finish marker
                     _log_fd.flush()
                     os.fsync(_log_fd)
-                # Notifies the commited transaction to subscribers
-                for log in self.commit_queue:
-                    self._notify_append(log)
-                self._notify_commit(self.subscriber)
+
             # log cache update
             _log_cache.extend(self.commit_queue)
             _log_cache.append(finish_marker)
@@ -391,7 +401,12 @@ class tx:
                     _old_roots[root_oid] = []
                 _old_roots[root_oid].append((prev_version, old_root))
 
-    def _commit_queue(self, ope, qname, tega_id, instance):
+        # Notifies the commited transaction to subscribers
+        for log in self.commit_queue:
+            self._notify_append(log)
+        self._notify_commit(self.subscriber)
+
+    def _enqueue_commit(self, ope, qname, tega_id, instance):
         '''
         Appends CRUD to the commit queue.
         '''
@@ -419,8 +434,8 @@ class tx:
         qname = path2qname(path)
         try:
             value = get(path, version)
-            version = value['_version']
-            self._commit_queue(OPE.GET, qname, tega_id, None)
+            #version = value['_version']
+            self.crud_queue.append((None, qname, tega_id))
             return value
         except KeyError:
             logging.debug('GET failed with the non-existent path: {}'.format(path))
@@ -433,6 +448,10 @@ class tx:
         Set "version" to the one from GET operation, when collision check is
         required.
         '''
+        self.crud_queue.append((self._put, instance, tega_id, version, deepcopy))
+
+    def _put(self, instance, tega_id=None, version=None, deepcopy=True):
+
         if deepcopy:
             if isinstance(instance, Cont):
                 instance = instance.deepcopy_()
@@ -473,7 +492,7 @@ class tx:
             # Commit queue
             if isinstance(instance, Cont):
                 instance = instance.deepcopy_()
-            self._commit_queue(OPE.PUT, qname, tega_id, instance)
+            self._enqueue_commit(OPE.PUT, qname, tega_id, instance)
 
     def delete(self, path, tega_id=None, version=None):
         '''
@@ -481,6 +500,10 @@ class tx:
 
         "path" can be either an instance of Cont or string.
         '''
+        self.crud_queue.append((self._delete, path, tega_id, version))
+
+    def _delete(self, path, tega_id=None, version=None):
+
         qname = None
         if isinstance(path, Cont):
             qname = path.qname_()
@@ -521,7 +544,7 @@ class tx:
                                             new_version, new_root)
 
             # Commit queue
-            self._commit_queue(OPE.DELETE, qname, tega_id, instance)
+            self._enqueue_commit(OPE.DELETE, qname, tega_id, instance)
 
     def get_candidate(self):
         '''
@@ -755,14 +778,16 @@ def reload_log():
             t = tx(policy=POLICY(policy))
             for crud in multi:
                 ope = crud[0]
-                if ope == OPE.PUT.name:
+                if ope == OPE.PUT:
                     instance = crud[1]
                     tega_id = crud[2]
                     t.put(instance, tega_id=tega_id, deepcopy=False)
-                elif ope == OPE.DELETE.name:
+                elif ope == OPE.DELETE:
                     path = crud[1]
                     tega_id = crud[2]
                     t.delete(path, tega_id=tega_id)
+                elif ope == OPE.GET:
+                    pass
             t.commit(write_log=False)
             del multi[:]
         elif line.startswith(COMMIT_START_MARKER) or line.startswith(SYNC_CONFIRMED_MARKER):
@@ -778,9 +803,11 @@ def reload_log():
                     root = subtree(path, instance)
                 else:
                     root = dict2cont(instance)
-                multi.append((OPE.PUT.name, root, tega_id))
+                multi.append((OPE.PUT, root, tega_id))
             elif ope == OPE.DELETE.name:
-                multi.append((OPE.DELETE.name, path, tega_id))
+                multi.append((OPE.DELETE, path, tega_id))
+            elif ope == OPE.GET.name:
+                multi.append((OPE.GET,))
 
 def crud_batch(notifications, subscriber=None):
     '''

@@ -14,7 +14,7 @@ if __name__ == '__main__':
 
     d = Driver()
     if ope == "get":
-        value = json.dumps(d.get(path=path, json_format=True))
+        value = json.dumps(d.get(path=path, python_dict=True))
         print(value)
     elif ope == "delete":
         d.delete(path=path)
