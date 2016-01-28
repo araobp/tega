@@ -441,13 +441,15 @@ class tx:
             logging.debug('GET failed with the non-existent path: {}'.format(path))
             raise
 
-    def put(self, instance, tega_id=None, version=None, deepcopy=True):
+    def put(self, instance, tega_id=None, version=None, deepcopy=True, path=None):
         '''
         PUT operation.
 
         Set "version" to the one from GET operation, when collision check is
         required.
         '''
+        if isinstance(instance, dict):
+            instance = subtree(path, instance)
         self.crud_queue.append((self._put, instance, tega_id, version, deepcopy))
 
     def _put(self, instance, tega_id=None, version=None, deepcopy=True):

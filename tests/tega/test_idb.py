@@ -79,6 +79,21 @@ class TestSequence(unittest.TestCase):
     def test_is_started(self):
         self.assertTrue(tega.idb.is_started())
 
+    def test_put(self):
+        with tega.idb.tx() as t:
+            t.put(path='a.b', instance=dict(c=1))
+        self.assertEqual(tega.idb.get(path='a'), {'b': {'c': 1}})
+        self.assertEqual(tega.idb.get(path='a.b.c'), 1)
+
+        a = tega.tree.Cont('a')
+        a.b.c = 1
+        with tega.idb.tx() as t:
+            t.put(a.b.c)
+        self.assertEqual(tega.idb.get(path='a'), {'b': {'c': 1}})
+        self.assertEqual(tega.idb.get(path='a'), a)
+        self.assertEqual(tega.idb.get(path='a.b.c'), 1)
+
+
     def test_transaction2notifications(self):
         transactions = [['!', [dict(a=1), dict(b=2)]], ['+', [dict(c=3)]]]
         notifications = tega.idb._transactions2notifications(transactions)
