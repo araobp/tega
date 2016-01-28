@@ -121,7 +121,6 @@ TODO(2016/01/10)
 - develop tega driver for golang
 - support DCN with two-phase commit
 - use protobuf for data validation
-- [working with IPython](./doc/IPython.md)
 
 References
 ----------
