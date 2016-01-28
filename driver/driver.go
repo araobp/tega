@@ -31,6 +31,9 @@ const (
 const (
 	SUBSCRIBE   = "SUBSCRIBE"
 	UNSUBSCRIBE = "UNSUBSCRIBE"
+	PUBLISH     = "PUBLISH"
+	NOTIFY      = "NOTIFY"
+	MESSAGE     = "MESSAGE"
 )
 
 // Tega protocol over WebSocket
@@ -62,16 +65,27 @@ type Operation struct {
 }
 
 // NOTIFY message from tega server
-type Notify struct {
+type Notification struct {
 	TegaId   string      `json:"tega_id"`
 	Ope      string      `json:"ope"`
 	Path     string      `json:"path"`
 	Instance interface{} `json:"instance"`
 }
 
+// PUBLISH message to tega server
+type Publish struct {
+	Msg interface{} `json:"message"`
+}
+
+// PUBLISH message to tega server
+type Message struct {
+	Msg interface{} `json:"message"`
+}
+
 // Subscriber interface for call back functions on NOTIFY
 type Subscriber interface {
-	OnNotify(*[]Notify)
+	OnNotify(*[]Notification)
+	OnMessage(channel string, tegaId string, message *Message)
 }
 
 // Returns a default Operation
@@ -116,15 +130,29 @@ func NewOperation(tegaId string, host string, port int, subscriber Subscriber) (
 func (ope *Operation) wsReader() {
 	var err error
 	for {
-		var notify string
+		var notifyOrMessage string
 		err = nil
-		err = websocket.Message.Receive(ope.ws, &notify)
+		err = websocket.Message.Receive(ope.ws, &notifyOrMessage)
 		if err == nil {
-			msg := strings.Split(notify, "\n")[1]
-			n := &[]Notify{}
-			err = json.Unmarshal([]byte(msg), n)
-			if err == nil {
-				ope.subscriber.OnNotify(n)
+			lines := strings.Split(notifyOrMessage, "\n")
+			cmd := strings.Split(lines[0], " ")
+			body := lines[1]
+
+			switch cmd[0] {
+			case NOTIFY:
+				notifications := &[]Notification{}
+				err = json.Unmarshal([]byte(body), notifications)
+				if err == nil {
+					ope.subscriber.OnNotify(notifications)
+				}
+			case MESSAGE:
+				channel := cmd[1]
+				tegaId := cmd[2]
+				message := &Message{}
+				err = json.Unmarshal([]byte(body), message)
+				if err == nil {
+					ope.subscriber.OnMessage(channel, tegaId, message)
+				}
 			}
 		}
 		if err != nil {
@@ -206,5 +234,15 @@ func (ope *Operation) Subscribe(path string, scope string) error {
 func (ope *Operation) Unsubscribe(path string) error {
 	unsubscribe := strings.Join([]string{UNSUBSCRIBE, path}, " ")
 	_, err := ope.ws.Write([]byte(unsubscribe))
+	return err
+}
+
+// Sends PUBLISH to tega server
+func (ope *Operation) Publish(path string, message *Message) error {
+	body, err := json.Marshal(Message{Msg: *message})
+	if err == nil {
+		publish := fmt.Sprintf("%s\n%s", strings.Join([]string{PUBLISH, path}, " "), body)
+		_, err = ope.ws.Write([]byte(publish))
+	}
 	return err
 }

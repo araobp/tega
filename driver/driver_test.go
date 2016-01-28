@@ -17,11 +17,15 @@ type B struct {
 type Self struct {
 }
 
-func (r *Self) OnNotify(v *[]Notify) {
+func (r *Self) OnNotify(v *[]Notification) {
 	log.Print("Notify: %s", *v)
 	for _, i := range *v {
 		log.Printf("Notify.Instance: %s", i.Instance.(string))
 	}
+}
+
+func (r *Self) OnMessage(channel string, tegaId string, v *Message) {
+	log.Printf("Channel: %s, TegaId: %s, Message: %s", channel, tegaId, *v)
 }
 
 var self *Self
@@ -86,5 +90,21 @@ func TestSubscribe(t *testing.T) {
 	if err != nil {
 		log.Print(err)
 	}
+	time.Sleep(1 * time.Second)
+}
+
+func TestPubSub(t *testing.T) {
+	ope.Subscribe("channels.ch1", LOCAL)
+	ope.Subscribe("channels.ch2", LOCAL)
+	ope.Subscribe("channels", LOCAL)
+	time.Sleep(1 * time.Second)
+	msg := Message{Msg: "Good Morning!"}
+	ope2.Publish("channels.ch1", &msg)
+	time.Sleep(1 * time.Second)
+	msg2 := Message{Msg: "Guten Morgen!"}
+	ope2.Publish("channels.ch2", &msg2)
+	time.Sleep(1 * time.Second)
+	msg3 := Message{Msg: "Bye!"}
+	ope2.Publish("channels", &msg3)
 	time.Sleep(1 * time.Second)
 }
