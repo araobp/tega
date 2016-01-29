@@ -136,7 +136,7 @@ def unsubscribe(subscriber, path):
         channels[path].remove(subscriber)
         if not channels[path]:
             del channels[path]
-            if path in global_channels[path]:
+            if path in global_channels:
                 del global_channels[path]
     if subscriber in subscribers:
         subscribers[subscriber].remove(path)
@@ -152,7 +152,7 @@ def unsubscribe_all(subscriber):
         for channel in channels:
             unsubscribe(subscriber, channel)
     else:
-        logging.warn('{} not subscribing any channels'.format(subscriber))
+        logging.info('{} not subscribing any channels'.format(subscriber))
 
 def add_tega_id(tega_id):
     tega_ids.add(tega_id)
