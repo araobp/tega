@@ -149,6 +149,8 @@ def func_args_kwargs(func_call):
     if len(f) > 1:
         arg = f[1]
         _args = arg.replace(' ', '').split(',')
+        if _args[0] == '':
+            _args = []
         _args_ = copy.copy(_args)
         kwargs = {}
         for arg in _args_:
@@ -156,9 +158,7 @@ def func_args_kwargs(func_call):
             if len(kv) > 1:
                 kwargs[kv[0]] = eval(kv[1])
                 _args.remove(arg)
-        args = []
-        for arg in _args:
-            args.append(eval(arg))
+        args = [eval(arg) for arg in _args]
     return (func_path, args, kwargs)
 
 def is_func(str_value):

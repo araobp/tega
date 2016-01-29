@@ -307,6 +307,7 @@ class PubSubHandler(tornado.websocket.WebSocketHandler):
     def initialize(self):
         self.parser = build_parser('server')
         self.tega_id = None
+        self.subscriber = None
 
     def check_origin(self, origin):
         '''
@@ -418,11 +419,13 @@ class PubSubHandler(tornado.websocket.WebSocketHandler):
         '''
         WebSocket close.
         '''
-        tega.idb.unsubscribe_all(self)  # TODO: currently, self.path is empty.
+        tega.idb.unsubscribe_all(self.subscriber) 
         for tega_id in list(subscriber_clients.keys()):
             if subscriber_clients[tega_id] == self:
                 del subscriber_clients[tega_id]
         tega.idb.remove_tega_id(self.tega_id)
+        if self.subscriber and self.subscriber.scope == SCOPE.GLOBAL:
+            tega.idb.remove_subscribe_forwarder(self.subscriber)
         logging.info('WebSocket(server): connection closed with {} and all channels unsubscribed'.format(self))
 
 class RpcHandler(tornado.web.RequestHandler):
