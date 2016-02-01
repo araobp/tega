@@ -12,7 +12,7 @@ import json
 import tornado
 import uuid
 import urllib
-from google.protobuf import json_format
+#from google.protobuf import json_format
 
 POST = OPE.POST.name 
 PUT = OPE.PUT.name 
@@ -185,15 +185,15 @@ class Driver(object):
         response, body = self.conn.request(url, PUT, body_json, HEADERS)
         self._response_check(response)
 
-    def put_proto(self, path, message, version=None):
-        '''
-        CRUD create/update operation for protobuf-encoded message
-        '''
-        url = self._urlencode(path2url(path), txid=self.txid,
-                             version=version, tega_id=self.tega_id)
-        body_json = json_format.MessageToJson(message) 
-        response, body = self.conn.request(url, PUT, body_json, HEADERS)
-        self._response_check(response)
+#    def put_proto(self, path, message, version=None):
+#        '''
+#        CRUD create/update operation for protobuf-encoded message
+#        '''
+#        url = self._urlencode(path2url(path), txid=self.txid,
+#                             version=version, tega_id=self.tega_id)
+#        body_json = json_format.MessageToJson(message) 
+#        response, body = self.conn.request(url, PUT, body_json, HEADERS)
+#        self._response_check(response)
 
     def delete(self, path, version=None):
         '''
@@ -222,19 +222,19 @@ class Driver(object):
         else:
             return subtree(path, dict_data)  # Returns Cont
 
-    def get_proto(self, path, template, version=None, internal=False):
-        '''
-        CRUD read operation with protobuf template
-        '''
-        url = self._urlencode(path2url(path), txid=self.txid,
-                             version=version, tega_id=self.tega_id,
-                             internal=internal)
-
-        response, body = self.conn.request(url, GET, None, HEADERS)
-        if response.status >= 300 or response.status < 200:
-            raise CRUDException('{} {}'.format(response.status, response.reason))
-
-        return json_format.Parse(body, template)
+#    def get_proto(self, path, template, version=None, internal=False):
+#        '''
+#        CRUD read operation with protobuf template
+#        '''
+#        url = self._urlencode(path2url(path), txid=self.txid,
+#                             version=version, tega_id=self.tega_id,
+#                             internal=internal)
+#
+#        response, body = self.conn.request(url, GET, None, HEADERS)
+#        if response.status >= 300 or response.status < 200:
+#            raise CRUDException('{} {}'.format(response.status, response.reason))
+#
+#        return json_format.Parse(body, template)
 
     def begin(self):
         '''
