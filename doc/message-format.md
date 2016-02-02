@@ -20,7 +20,7 @@ In tega,
         Publish                 = "PUBLISH" SP channel CRLF message
         Message                 = "MESSAGE" SP channel SP tega_id CRLF message
         Request                 = "REQUEST" SP seq_no SP TEGA-request-type SP
-                                   tega_id SP qs
+                                   tega_id SP path CRLF body
         Response                = "RESPONSE" SP seq_no SP TEGA-request-type SP
                                    tega_id CRLF body
 ```
