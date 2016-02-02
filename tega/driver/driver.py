@@ -318,20 +318,17 @@ class Driver(object):
         RPC (Remote Procedure Call)
         '''
         url = None
-        if args and kwargs:
-            url = self._cmdencode('rpc', tega_id=self.tega_id, path=func_path,
-                                 args=args, kwargs=kwargs)
-        elif args:
-            url = self._cmdencode('rpc', tega_id=self.tega_id,
-                                 path=func_path, args=args)
-        elif kwargs:
-            url = self._cmdencode('rpc', tega_id=self.tega_id,
-                                 path=func_path, kwargs=kwargs)
-        else:
-            url = self._cmdencode('rpc', tega_id=self.tega_id,
-                                 path=func_path)
+        body = None
 
-        response, body = self.conn.request(url, POST, None, HEADERS)
+        url = self._cmdencode('rpc', tega_id=self.tega_id, path=func_path)
+        if args and kwargs:
+            body = json.dumps(dict(args=args, kwargs=kwargs))
+        elif args:
+            body = json.dumps(dict(args=args))
+        elif kwargs:
+            body = json.dumps(dict(kwargs=kwargs))
+
+        response, body = self.conn.request(url, POST, body, HEADERS)
         if response.status == 200 and body:
             body = json.loads(body.decode('utf-8'))['result']
             return (response.status, response.reason, body)

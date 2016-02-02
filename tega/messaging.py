@@ -34,7 +34,7 @@ def build_parser(direction):
         Publish                 = "PUBLISH" SP channel CRLF message
         Message                 = "MESSAGE" SP channel SP tega_id CRLF message
         Request                 = "REQUEST" SP seq_no SP TEGA-request-type SP
-                                   tega_id SP qs
+                                   tega_id SP path CRLF body 
         Response                = "RESPONSE" SP seq_no SP TEGA-request-type SP
                                    tega_id CRLF body 
         '''
@@ -55,19 +55,29 @@ def build_parser(direction):
 
     return _parse_msg
 
+def parse_rpc_body(body):
+    '''
+    Parses RPC body
+    '''
+    args = kwargs = None
+    if 'args' in body:
+        args = body['args']
+    if 'kwargs' in body:
+        kwargs = body['kwargs']
+    return (args, kwargs)
+
 @gen.coroutine
-def request(subscriber, request_type, tega_id, **kwargs):
+def request(subscriber, request_type, tega_id, path, **kwargs):
     '''
     tega request/response service -- this method returns a generator
     (tornado coroutine) to send a request to a remote tega db.
     '''
     global seq_no
-    qs = urllib.parse.urlencode(dict(**kwargs))  # query string
     seq_no += 1
     if seq_no > 65535:  # seq_no region: 0 - 65535.
         seq_no = 0
-    subscriber.write_message('REQUEST {} {} {} {}'.format(
-        seq_no, request_type.name, tega_id, qs))
+    subscriber.write_message('REQUEST {} {} {} {}\n{}'.format(
+        seq_no, request_type.name, tega_id, path, json.dumps(kwargs)))
     queue = Queue(maxsize=1)  # used like a synchronous queue
     callback[seq_no] = queue  # synchronous queue per request/response
     try:

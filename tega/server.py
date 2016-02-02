@@ -3,7 +3,7 @@ from tega.env import PORT, HEADERS, TRANSACTION_GC_PERIOD, DATA_DIR,\
         REQUEST_TIMEOUT
 import tega.idb
 from tega.idb import tx, clear, roots, old, NonLocalRPC
-from tega.messaging import build_parser, request, on_response, REQUEST_TYPE
+from tega.messaging import build_parser, parse_rpc_body, request, on_response, REQUEST_TYPE
 import tega.subscriber
 from tega.subscriber import Subscriber, SCOPE
 from tega.tree import Cont, is_builtin_type
@@ -367,22 +367,19 @@ class PubSubHandler(tornado.websocket.WebSocketHandler):
         elif cmd == 'REQUEST':
             type_ = REQUEST_TYPE(param[1])
             if type_ == REQUEST_TYPE.RPC:
-                self._route_rpc_request(param)
+                self._route_rpc_request(param, body)
         elif cmd == 'RESPONSE':
             type_ = REQUEST_TYPE(param[1])
             if type_ == REQUEST_TYPE.RPC:
                 self._route_rpc_response(param, body)
 
-    def _route_rpc_request(self, param):
+    def _route_rpc_request(self, param, body):
         seq_no = int(param[0])
         tega_id = param[2]
-        qs = param[3]
-        qs_dict = urllib.parse.parse_qs(qs, encoding='utf-8')
-        path = qs_dict['path'][0]
+        path = param[3]
+        args, kwargs = parse_rpc_body(body)
         dst_tega_id = str(tega.idb.get(path)).lstrip('%').split('.')[0]
         if dst_tega_id in plugins.keys():  # to global idb
-            args = eval(qs_dict['args'][0])
-            kwargs = eval(qs_dict['kwargs'][0])
             result = tega.idb.rpc(path, args, kwargs)
             if result:   # Returns RESPONSE
                 self.write_message('RESPONSE {} {} {}\n{}'.
@@ -392,11 +389,12 @@ class PubSubHandler(tornado.websocket.WebSocketHandler):
                                json.dumps(result)))
         else:  # Forwards the REQUEST to another local idb
             _subscriber = tega.idb.get_subscriber_instances(dst_tega_id)[0]
-            _subscriber.write_message('REQUEST {} {} {} {}'.
+            _subscriber.write_message('REQUEST {} {} {} {}\n{}'.
                                       format(seq_no,
                                              REQUEST_TYPE.RPC.name,
                                              tega_id,
-                                             qs))
+                                             path,
+                                             json.dumps(body)))
 
     def _route_rpc_response(self, param, body):
         global subscriber_clients
@@ -437,13 +435,10 @@ class RpcHandler(tornado.web.RequestHandler):
     def post(self):
         tega_id = self.get_argument('tega_id')
         path = self.get_argument('path')
-        _args = self.get_argument('args', None)
-        _kwargs = self.get_argument('kwargs', None)
         args = kwargs = None
-        if _args:
-            args = eval(_args)
-        if _kwargs:
-            kwargs = eval(_kwargs)
+        if self.body.request:
+            body = tornado.escape.json_decode(self.request.body)
+            args, kwargs = parse_rpc_body(body)
         result = yield tega.idb.rpc2(path, args, kwargs, tega_id)
         if result:
             self.write(json.dumps({'result': result}))
@@ -624,12 +619,9 @@ class _SubscriberClient(object):
             seq_no = param[0]
             type_ = param[1]
             tega_id = param[2]
-            qs = param[3]
-            qs_dict = urllib.parse.parse_qs(qs, encoding='utf-8')
+            path = param[3]
             if REQUEST_TYPE(type_) == REQUEST_TYPE.RPC:
-                path = qs_dict['path'][0]
-                args = eval(qs_dict['args'][0])
-                kwargs = eval(qs_dict['kwargs'][0])
+                args, kwargs = parse_rpc_body(body)
                 result = tega.idb.rpc(path, args, kwargs)
                 self.client.write_message('RESPONSE {} {} {}\n{}'.
                         format(seq_no,
