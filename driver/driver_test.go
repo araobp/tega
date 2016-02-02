@@ -35,8 +35,8 @@ var ope2 *Operation
 
 func TestMain(t *testing.T) {
 	self = &Self{}
-	ope, _ = NewOperation("", "", 0, self)
-	ope2, _ = NewOperation("anonymous2", "", 0, self)
+	ope, _ = NewOperation("", "", 0, self, GLOBAL)
+	ope2, _ = NewOperation("anonymous2", "", 0, self, LOCAL) 
 	ope.Delete("a")
 	body := "test"
 	ope.Put("a.b.c", &body)
@@ -117,8 +117,8 @@ func TestRpc(t *testing.T) {
 
 func max(argsKwargs ArgsKwargs) (Result, error) {
 	args := argsKwargs.Args
-	v1 := args[0].(int)
-	v2 := args[1].(int)
+	v1 := args[0].(float64)
+	v2 := args[1].(float64)
 	if v1 >= v2 {
 		return Result{Res: v1}, errors.New("OK")
 	} else {

@@ -109,7 +109,7 @@ type Subscriber interface {
 }
 
 // Returns a default Operation
-func NewOperation(tegaId string, host string, port int, subscriber Subscriber) (*Operation, error) {
+func NewOperation(tegaId string, host string, port int, subscriber Subscriber, scope string) (*Operation, error) {
 
 	var ope *Operation
 
@@ -127,7 +127,7 @@ func NewOperation(tegaId string, host string, port int, subscriber Subscriber) (
 	origin := fmt.Sprintf(ORIGIN_URL, host)
 	ws, err := websocket.Dial(url, "", origin)
 	if err == nil {
-		session := strings.Join([]string{SESSION, tegaId, LOCAL}, " ")
+		session := strings.Join([]string{SESSION, tegaId, scope}, " ")
 		_, err = ws.Write([]byte(session))
 		if err == nil {
 			ope = &Operation{
@@ -185,8 +185,11 @@ func (ope *Operation) wsReader() {
 				case RPC:
 					argsKwargs := ArgsKwargs{}
 					json.Unmarshal([]byte(body), &argsKwargs)
+					//--- Remote Procedure Call ---
 					func_ := ope.rpcs[path]
 					result, err := func_(argsKwargs)
+					//-----------------------------
+
 					body, err := json.Marshal(result)
 					if err == nil {
 						response := fmt.Sprintf("%s %s %s %s\n%s", RESPONSE, seqNo, RPC, tegaId, body)
