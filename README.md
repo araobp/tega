@@ -94,7 +94,7 @@ as of 2015/6/14
 ```
 Requirements
 ------------
-- python3
+- python3.5
 - tornado
 - httplib2
 - pyyaml
