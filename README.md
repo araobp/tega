@@ -98,7 +98,7 @@ Requirements
 - tornado
 - httplib2
 - pyyaml
-- enum34(<= python3.2)
+- readline
 
 Documentation
 -------------
