@@ -109,7 +109,7 @@ Documentation
 - [tega db format](./doc/tega-db-format.md)
 - [sync path and notifications](./doc/sync_path_and_notifications.md)
 - [subscription scope](./doc/subscription_scope.md)
-- [Using protobuf](./doc/protobuf.md)
+- [rpc routing](https://docs.google.com/drawings/d/1GHHYrF3s0MRypT_SxHkDAT-aFTfCtMh9NkqQrVEtvqo/pub?w=960&h=720)
 
 TODO(2016/01/10)
 ----
