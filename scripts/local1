@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
-./server -p 8889 -d ~/tega/var -H localhost -P 8888 -S inventory.ne1 -s -t local1 -e ~/tega/plugins/local1
+./server -p 8889 -d ./var -H localhost -P 8888 -S inventory.ne1 -s -t local1 -e ../plugins/local1
 
