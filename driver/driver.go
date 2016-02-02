@@ -9,6 +9,8 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -34,6 +36,8 @@ const (
 	PUBLISH     = "PUBLISH"
 	NOTIFY      = "NOTIFY"
 	MESSAGE     = "MESSAGE"
+	REQUEST     = "REQUEST"
+	RESPONSE    = "RESPONSE"
 )
 
 // Tega protocol over WebSocket
@@ -53,6 +57,10 @@ const (
 	ORIGIN_URL           = "http://%s/"
 )
 
+const (
+	RPC = "RPC"
+)
+
 // Tega operation
 type Operation struct {
 	tegaId     string
@@ -62,6 +70,18 @@ type Operation struct {
 	path       string
 	ws         *websocket.Conn
 	subscriber Subscriber
+	rpcs       map[string]func(ArgsKwargs) (Result, error)
+}
+
+// args and kwargs for RPC
+type ArgsKwargs struct {
+	Args   []interface{}
+	Kwargs map[string]interface{}
+}
+
+// Result returend by RPC
+type Result struct {
+	Res interface{} `json:"result"`
 }
 
 // NOTIFY message from tega server
@@ -82,7 +102,7 @@ type Message struct {
 	Msg interface{} `json:"message"`
 }
 
-// Subscriber interface for call back functions on NOTIFY
+// Subscriber interface for call back functions on NOTIFY and MESSAGE
 type Subscriber interface {
 	OnNotify(*[]Notification)
 	OnMessage(channel string, tegaId string, message *Message)
@@ -118,6 +138,7 @@ func NewOperation(tegaId string, host string, port int, subscriber Subscriber) (
 				path:       "",
 				ws:         ws,
 				subscriber: subscriber,
+				rpcs:       make(map[string]func(ArgsKwargs) (Result, error)),
 			}
 		}
 	}
@@ -130,15 +151,17 @@ func NewOperation(tegaId string, host string, port int, subscriber Subscriber) (
 func (ope *Operation) wsReader() {
 	var err error
 	for {
-		var notifyOrMessage string
+		var wsMessage string
 		err = nil
-		err = websocket.Message.Receive(ope.ws, &notifyOrMessage)
+		err = websocket.Message.Receive(ope.ws, &wsMessage)
 		if err == nil {
-			lines := strings.Split(notifyOrMessage, "\n")
-			cmd := strings.Split(lines[0], " ")
+			lines := strings.Split(wsMessage, "\n")
+			line := strings.Split(lines[0], " ")
+			cmd := line[0]
+			params := line[1:]
 			body := lines[1]
 
-			switch cmd[0] {
+			switch cmd {
 			case NOTIFY:
 				notifications := &[]Notification{}
 				err = json.Unmarshal([]byte(body), notifications)
@@ -146,12 +169,33 @@ func (ope *Operation) wsReader() {
 					ope.subscriber.OnNotify(notifications)
 				}
 			case MESSAGE:
-				channel := cmd[1]
-				tegaId := cmd[2]
+				channel := params[0]
+				tegaId := params[1]
 				message := &Message{}
 				err = json.Unmarshal([]byte(body), message)
 				if err == nil {
 					ope.subscriber.OnMessage(channel, tegaId, message)
+				}
+			case REQUEST:
+				seqNo := params[0]
+				requestType := params[1]
+				tegaId := params[2]
+				path := params[3]
+				switch requestType {
+				case RPC:
+					argsKwargs := ArgsKwargs{}
+					json.Unmarshal([]byte(body), &argsKwargs)
+					func_ := ope.rpcs[path]
+					result, err := func_(argsKwargs)
+					body, err := json.Marshal(result)
+					if err == nil {
+						response := fmt.Sprintf("%s %s %s %s\n%s", RESPONSE, seqNo, RPC, tegaId, body)
+						_, err = ope.ws.Write([]byte(response))
+					} else {
+						log.Print(err)
+					}
+				default:
+					log.Printf("Unidentified request type: %s", requestType)
 				}
 			}
 		}
@@ -241,8 +285,21 @@ func (ope *Operation) Unsubscribe(path string) error {
 func (ope *Operation) Publish(path string, message *Message) error {
 	body, err := json.Marshal(Message{Msg: *message})
 	if err == nil {
-		publish := fmt.Sprintf("%s\n%s", strings.Join([]string{PUBLISH, path}, " "), body)
+		publish := fmt.Sprintf("%s %s\n%s", PUBLISH, path, body)
 		_, err = ope.ws.Write([]byte(publish))
 	}
 	return err
+}
+
+// Registers RPC with tega server
+func (ope *Operation) RegisterRpc(path string, rpc func(ArgsKwargs) (Result, error)) {
+	ope.rpcs[path] = rpc
+	funcFullName := runtime.FuncForPC(reflect.ValueOf(rpc).Pointer()).Name()
+	funcNameSlice := strings.Split(funcFullName, ".")
+	funcName := funcNameSlice[len(funcNameSlice)-1]
+	funcStr := fmt.Sprintf("%%%s.%s", ope.tegaId, funcName)
+	err := ope.Put(path, funcStr)
+	if err != nil {
+		log.Print(err)
+	}
 }

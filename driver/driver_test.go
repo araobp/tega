@@ -1,6 +1,7 @@
 package driver
 
 import (
+	"errors"
 	"log"
 	"testing"
 	"time"
@@ -107,4 +108,20 @@ func TestPubSub(t *testing.T) {
 	msg3 := Message{Msg: "Bye!"}
 	ope2.Publish("channels", &msg3)
 	time.Sleep(1 * time.Second)
+}
+
+func TestRpc(t *testing.T) {
+	ope.RegisterRpc("test.func.max", max)
+	time.Sleep(10 * time.Second)
+}
+
+func max(argsKwargs ArgsKwargs) (Result, error) {
+	args := argsKwargs.Args
+	v1 := args[0].(int)
+	v2 := args[1].(int)
+	if v1 >= v2 {
+		return Result{Res: v1}, errors.New("OK")
+	} else {
+		return Result{Res: v2}, errors.New("OK")
+	}
 }
