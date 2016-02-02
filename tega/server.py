@@ -436,7 +436,7 @@ class RpcHandler(tornado.web.RequestHandler):
         tega_id = self.get_argument('tega_id')
         path = self.get_argument('path')
         args = kwargs = None
-        if self.body.request:
+        if self.request.body:
             body = tornado.escape.json_decode(self.request.body)
             args, kwargs = parse_rpc_body(body)
         result = yield tega.idb.rpc2(path, args, kwargs, tega_id)
