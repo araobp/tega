@@ -11,6 +11,7 @@ MD-SAL-like database for small PCs (incl. Raspberry Pi), written in Python:
 - Schema-less
 - Extensible with plugins
 - NAT traversal (HTTP/WebSocket)
+- Python and Go driver
 
 Design policy
 -------------
