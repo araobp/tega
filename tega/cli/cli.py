@@ -26,6 +26,7 @@ operations = '|'.join(['get', 'geta', 'put', 'delete',
     'begin', 'cancel', 'commit', 'subscribe', 'unsubscribe', 'publish'])
 cmd_pattern = re.compile('^(' + operations +
         ')\s+([\(\)\[\]=,\.\w\*]+)\s*(-*\d*)$|^(rollback)\s+([\w]+)\s+(-\d*)$|^(index)\s+([.\w]+)$')
+rpc_pattern = re.compile('^[\.\w]+\([\w\s\'\"\,\.\/=-]*\)$')
 methods = {'get': OPE.GET.name, 'geta': OPE.GET.name,
     'put': OPE.PUT.name, 'delete': OPE.DELETE.name}
 HELP = '''
@@ -156,7 +157,7 @@ def process_cmd(tornado_loop=False):
             print('txid: {} commited'.format(txid))
         except TransactionException as e:
             print(e)
-    elif len(cmd.split(' ')) == 1 and len(cmd.split('.')) > 1:
+    elif rpc_pattern.match(cmd):
         func_path, args, kwargs = func_args_kwargs(cmd)
         if args and kwargs:
             status, reason, data = driver.rpc(func_path, *args, **kwargs)
@@ -167,7 +168,10 @@ def process_cmd(tornado_loop=False):
         else:
             status, reason, data = driver.rpc(func_path)
         if data:
-            print(data)
+            if 'result' in data:
+                print(data['result'])
+            else:
+                print(data)
         else:
             print('{} {}'.format(status, reason))
     else:

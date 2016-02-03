@@ -2,6 +2,7 @@ from tega.frozendict import frozendict
 
 import copy
 import os
+import re
 
 def path2qname(path):
     '''
@@ -138,6 +139,18 @@ def subtree(path, value):
 
     return cont
 
+_quoted_arg_matcher = re.compile('\s*([\'\"]+[\w\s\.\/-]*[\'\"]+)\s*')
+
+def eval_arg(arg):
+    '''
+    RPC argument evaluation
+    '''
+    m = _quoted_arg_matcher.match(arg)
+    if m:
+        return eval(m.group(1))
+    else:
+        return eval(arg.strip())
+
 def func_args_kwargs(func_call):
     '''
     Convert a string "func(*args, **kwargs)" into a function name,
@@ -148,7 +161,7 @@ def func_args_kwargs(func_call):
     func_path = f[0]
     if len(f) > 1:
         arg = f[1]
-        _args = arg.replace(' ', '').split(',')
+        _args = arg.split(',')
         if _args[0] == '':
             _args = []
         _args_ = copy.copy(_args)
@@ -156,9 +169,9 @@ def func_args_kwargs(func_call):
         for arg in _args_:
             kv = arg.split('=')
             if len(kv) > 1:
-                kwargs[kv[0]] = eval(kv[1])
+                kwargs[kv[0].strip()] = eval_arg(kv[1])
                 _args.remove(arg)
-        args = [eval(arg) for arg in _args]
+        args = [eval_arg(arg) for arg in _args]
     return (func_path, args, kwargs)
 
 def is_func(str_value):

@@ -140,6 +140,10 @@ func NewOperation(tegaId string, host string, port int, subscriber Subscriber, s
 				subscriber: subscriber,
 				rpcs:       make(map[string]func(ArgsKwargs) (Result, error)),
 			}
+			err = ope.Subscribe(tegaId, LOCAL)
+			if err != nil {
+				log.Print(err)
+			}
 		}
 	}
 
@@ -164,6 +168,7 @@ func (ope *Operation) wsReader() {
 			switch cmd {
 			case NOTIFY:
 				notifications := &[]Notification{}
+				log.Printf("NOTIFY received: %v", notifications)
 				err = json.Unmarshal([]byte(body), notifications)
 				if err == nil {
 					ope.subscriber.OnNotify(notifications)
@@ -172,6 +177,7 @@ func (ope *Operation) wsReader() {
 				channel := params[0]
 				tegaId := params[1]
 				message := &Message{}
+				log.Printf("MESSAGE received: %s %s %v", channel, tegaId, message)
 				err = json.Unmarshal([]byte(body), message)
 				if err == nil {
 					ope.subscriber.OnMessage(channel, tegaId, message)
@@ -181,6 +187,7 @@ func (ope *Operation) wsReader() {
 				requestType := params[1]
 				tegaId := params[2]
 				path := params[3]
+				log.Printf("REQUEST received: %s %s %s %s %v", seqNo, requestType, tegaId, path, body)
 				switch requestType {
 				case RPC:
 					argsKwargs := ArgsKwargs{}

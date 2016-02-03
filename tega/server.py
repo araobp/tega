@@ -379,7 +379,7 @@ class PubSubHandler(tornado.websocket.WebSocketHandler):
         path = param[3]
         args, kwargs = parse_rpc_body(body)
         dst_tega_id = str(tega.idb.get(path)).lstrip('%').split('.')[0]
-        if dst_tega_id in plugins.keys():  # to global idb
+        if dst_tega_id in plugins.keys():  # to the plugin attached to this db 
             result = tega.idb.rpc(path, args, kwargs)
             if result:   # Returns RESPONSE
                 self.write_message('RESPONSE {} {} {}\n{}'.
