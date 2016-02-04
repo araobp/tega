@@ -243,5 +243,41 @@ class TestSequence(unittest.TestCase):
         self.assertEqual(1, version)
         self.assertEqual(2, len(old))
 
+    def test_ephemeral_nodes(self):
+        r = tega.tree.Cont('r')
+        tega.idb.add_tega_id('owner1')
+        with tega.idb.tx() as t:
+            r.a.b = 1
+            r.a.c = 2
+            r.A.b = 3
+            r.B.c = 4
+            t.put(r.a.b)
+            t.put(r.a.c, ephemeral=True)
+            t.put(r.A)
+            t.put(r.B, ephemeral=True)
+
+        instance = tega.idb.get('r.a')
+        print(instance.serialize_(internal=True))
+        d1a = {'b': 1}
+        d1b = {'b': 1, 'c': 2}
+        d2a = instance.serialize_(serialize_ephemeral=False)
+        print(d2a)
+        d2b = instance.serialize_()
+        self.assertEqual(d1a, d2a)
+        self.assertEqual(d1b, d2b)
+
+        instance = tega.idb.get('r')
+        d1a = {'a': {'b': 1}, 'A': {'b': 3}}
+        d1b = {'a': {'b': 1, 'c': 2}, 'A': {'b': 3, 'c': 4}}
+        d2a = instance.serialize_(serialize_ephemeral=False)
+        d2b = instance.serialize_()
+        self.assertEqual(d1a, d2a)
+        self.assertEqual(d1b, d2b)
+
+        tega.idb.remove_tega_id('owner1')
+        instance = tega.idb.get('r.a')
+        d3 = instance.serialize_()
+        self.assertEqual(d1a, d3)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

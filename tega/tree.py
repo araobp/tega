@@ -50,6 +50,7 @@ class Cont(MutableMapping):
         self._setattr('_parent', _parent)
         self._setattr('_version', version)
         self._setattr('_frozen', False)
+        self._setattr('_ephemeral', False)
 
     def __len__(self):
         return len(self.__dict__)
@@ -97,6 +98,7 @@ class Cont(MutableMapping):
         value._setattr('_version', 0)
         value._setattr('_parent', self)
         value._setattr('_oid', key)
+        value._setattr('_ephemeral', False)
         self._setattr(key, value)
 
     def __setattr__(self, key, value):
@@ -198,6 +200,15 @@ class Cont(MutableMapping):
         '''
         if self._getattr('_frozen'):
             raise AttributeError()
+
+    def root_(self):
+        '''
+        Returns a root Cont object.
+        '''
+        if self._parent:
+            return self._parent.root_()
+        else:
+            return self
 
     def qname_(self, qname=None):
         '''
@@ -350,7 +361,20 @@ class Cont(MutableMapping):
             return self.walk_()
         # TODO: what if a user issued print mistakinglly? 
 
-    def serialize_(self, internal=False, out=None, str_key=False):
+    def ephemeral_(self):
+        '''
+        Sets the node ephemeral.
+        '''
+        self._setattr('_ephemeral', True)
+
+    def is_ephemeral_(self):
+        return self._getattr('_ephemeral')
+
+    def _is_serializable(self, key):
+        #return not key in ('_frozen', '_ephemeral')
+        return not key in ('_frozen',)
+
+    def serialize_(self, internal=False, out=None, str_key=False, serialize_ephemeral=True):
         '''
         Serializes a Cont object into Python dict.
 
@@ -360,20 +384,23 @@ class Cont(MutableMapping):
         if out is None:
             out = {}
         for k,v in self.__dict__.items():
+            type_v = type(v)
+            if not serialize_ephemeral and type_v == Cont and v.is_ephemeral_():
+                continue
             sk = str(k)
             if str_key: k = sk
             if not sk.startswith('_'):
-                if type(v) == Cont:
+                if type_v == Cont:
                     out[k] = {}
-                elif type(v) == Bool or type(v) == RPC or self.is_wrapped(v):
+                elif type_v == Bool or type_v == RPC or self.is_wrapped(v):
                     out[k] = v.serialize_(internal=internal)
             elif internal and sk.startswith('_'):
-                if type(v) == Cont or internal and type(v) == RPC:
+                if type_v == Cont or internal and type_v == RPC:
                     s = v._getattr('_oid')
                     out[k] = s
-                elif type(v) == Func:
+                elif type_v == Func:
                     out[k] = str(v)
-                elif k != '_frozen':
+                elif self._is_serializable(k):
                     out[k] = v
 
             if k != '_parent' and isinstance(v, Cont):
@@ -480,28 +507,32 @@ class Cont(MutableMapping):
         version = self._version
         parent = self._parent
         oid = self._oid
+        ephemeral = self._ephemeral
         del self._version
         del self._parent
         del self._oid
+        del self._ephemeral
         c = copy.copy(self)
-        self._version = version
-        self._parent = parent
-        self._oid = oid
         c._parent = parent
         c._version = version
         c._oid = oid
+        c._ephemeral = ephemeral
         return c
 
-    def _serialize_(self, internal=False, str_key=False):
+    def _serialize_(self, internal=False, str_key=False, serialize_ephemeral=True):
         '''
         Note: yaml and str_key are just for API compatibility thus ignored.
         '''
+        if not serialize_ephemeral and self.is_ephemeral_():
+            return None
+        
         if internal:
             wrapped = {}
             wrapped['_value'] = self
             wrapped['_version'] = self._getattr('_version')
             wrapped['_oid'] = self._getattr('_oid')
             wrapped['_parent'] = self._getattr('_parent')._getattr('_oid')
+            wrapped['_ephemeral'] = self._getattr('_ephemeral')
             return wrapped
         else:
             return self
@@ -517,7 +548,10 @@ class Cont(MutableMapping):
             'change_': change_,
             'serialize_': _serialize_,
             'dumps_': dumps_,
-            'delete_': delete_
+            'delete_': delete_,
+            'ephemeral_': ephemeral_,
+            'is_ephemeral_': is_ephemeral_,
+            'root_': root_
             }
 
     _types = {}
@@ -579,7 +613,7 @@ class Bool(Cont):
                 elif k == '_parent':
                     s = v._getattr('_oid')
                     out[k] = s
-                elif k != '_frozen':
+                elif self._is_serializable(k):
                     out[k] = v
             return out
         else:

@@ -192,6 +192,47 @@ class TestSequence(unittest.TestCase):
         with self.assertRaises(AttributeError):
             r._immutability_check()
 
+    def test_root(self):
+        r = tega.tree.Cont('r')
+        r.a.b = 1
+        self.assertEqual(r, r.a.b.root_())
+        self.assertEqual(r, r.b.root_())
+        self.assertEqual(r, r.root_())
+
+    def test_ephemeral(self):
+
+        r = tega.tree.Cont('r')
+        r.a.b = 1
+        r.a.b.ephemeral_()
+        d = {'_parent': 'a', '_oid': 'b', '_version': 0, '_value': 1,
+                '_ephemeral': True} 
+        self.assertEqual(d, r.a.b.serialize_(internal=True))
+        self.assertEqual(1, r.a.b.serialize_())
+        self.assertEqual(None, r.a.b.serialize_(internal=True, serialize_ephemeral=False))
+
+        r = tega.tree.Cont('r')
+        r.a.b = 1
+        r.x.y = 2
+        r.o.p = 3
+        r.a.ephemeral_()
+        r.o.p.ephemeral_()
+        self.assertEqual(dict(x=dict(y=2)), r.serialize_(serialize_ephemeral=False))
+
+        r = tega.tree.Cont('r')
+        r.a.x = 1
+        r.a.y = 2
+        r.b.x = 3
+        r.b.y = 4
+        r.a.ephemeral_()
+        self.assertTrue(r.a.is_ephemeral_())
+        self.assertFalse(r.b.is_ephemeral_())
+        d = r.serialize_()
+        self.assertTrue('a' in d)
+        self.assertTrue('b' in d)
+        self.assertFalse(r.a.x.is_ephemeral_())
+        r.a.x.ephemeral_()
+        self.assertTrue(r.a.x.is_ephemeral_())
+
     def test_qname(self):
         from tega.frozendict import frozendict
         r = tega.tree.Cont('r')
@@ -232,31 +273,42 @@ class TestSequence(unittest.TestCase):
         r = tega.tree.Cont('r')
 
         r.a.b = 1
-        d = {'_version': 0, '_value': 1, '_parent': 'a', '_oid': 'b'}
+        d = {'_version': 0, '_value': 1, '_parent': 'a', '_oid': 'b',
+                '_ephemeral': False}
         self.assertEqual(d, r.a.b.serialize_(internal=True))
 
         r.a.b = '1'
-        d = {'_version': 0, '_value': '1', '_parent': 'a', '_oid': 'b'}
+        d = {'_version': 0, '_value': '1', '_parent': 'a', '_oid': 'b',
+                '_ephemeral': False}
         self.assertEqual(d, r.a.b.serialize_(internal=True))
 
         r.a.b = True
-        d = {'_parent': 'a', '_oid': 'b', '_version': 0, '_value': True} 
+        d = {'_parent': 'a', '_oid': 'b', '_version': 0, '_value': True,
+                '_ephemeral': False}
         self.assertEqual(d, r.a.b.serialize_(internal=True))
         self.assertEqual(True, r.a.b.serialize_())
 
         r.a.b = False 
-        d = {'_parent': 'a', '_oid': 'b', '_version': 0, '_value': False} 
+        d = {'_parent': 'a', '_oid': 'b', '_version': 0, '_value': False,
+                '_ephemeral': False} 
         self.assertEqual(d, r.a.b.serialize_(internal=True))
         self.assertEqual(False, r.a.b.serialize_())
 
         func = tega.tree.Func('id1', dict)
         r.a.b = func
-        d = {'a': {'_oid': 'a', '_parent': 'r', '_version': 0, 'b': {'_oid': 'b', '_value': '%id1.dict', '_parent': 'a', '_version': 0}}, '_oid': 'r', '_parent': None, '_version': 0}
+        d = {'a': {'_oid': 'a', '_parent': 'r', '_version': 0, '_ephemeral':
+            False, 'b': {'_oid':
+            'b', '_value': '%id1.dict', '_parent': 'a', '_version':
+            0, '_ephemeral': False}}, '_oid':
+            'r', '_parent': None, '_version': 0, '_ephemeral': False}
         self.assertEqual(d, r.serialize_(internal=True))
-        d = {'b': {'_parent': 'a', '_oid': 'b', '_version': 0, '_value': '%id1.dict'}, '_oid': 'a', '_version': 0, '_parent': 'r'}
+        d = {'b': {'_parent': 'a', '_oid': 'b', '_version': 0, '_value':
+            '%id1.dict', '_ephemeral': False}, '_oid': 'a', '_version': 0, '_parent': 'r',
+            '_ephemeral': False}
         self.assertEqual(d, r.a.serialize_(internal=True))
         self.assertEqual('%id1.dict', r.a.b.serialize_())
-        d = {'_version': 0, '_oid': 'b', '_value': '%id1.dict', '_parent': 'a'}
+        d = {'_version': 0, '_oid': 'b', '_value': '%id1.dict', '_parent':
+                'a', '_ephemeral': False}
         self.assertEqual(d, r.a.b.serialize_(internal=True))
 
     def test_dumps_(self):
