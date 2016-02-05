@@ -159,6 +159,8 @@ def add_ephemeral_node(tega_id, path):
     '''
     Adds an ephemeral node.
     '''
+    if not tega_id in tega_ids:
+        raise Exception('tega_id is None')
     if not tega_id in _ephemeral_nodes:
         holder = set()
         _ephemeral_nodes[tega_id] = holder
@@ -172,8 +174,8 @@ def remove_ephemeral_node(tega_id, path):
     '''
     if tega_id in _ephemeral_nodes:
         _ephemeral_nodes[tega_id].remove(path)
-    if not _ephemeral_nodes[tega_id]:
-        del _ephemeral_nodes[tega_id]
+        if not _ephemeral_nodes[tega_id]:
+            del _ephemeral_nodes[tega_id]
 
 def get_ephemeral_nodes(tega_id):
     '''
@@ -190,10 +192,9 @@ def add_tega_id(tega_id):
 def remove_tega_id(tega_id):
     holder = get_ephemeral_nodes(tega_id)
     with tx() as t:
-        for path in holder:
+        for path in holder.copy():
             t.delete(path)
             remove_ephemeral_node(tega_id, path)
-    tega_ids.remove(tega_id)
     tega_ids.remove(tega_id)
 
 def get_tega_ids():
@@ -497,6 +498,8 @@ class tx:
             ephemeral=False):
 
         qname = instance.qname_()
+        if not tega_id:
+            tega_id = self.tega_id
 
         if deepcopy:
             if isinstance(instance, Cont):
@@ -556,6 +559,9 @@ class tx:
     def _delete(self, path, tega_id=None, version=None, ephemeral=False):
 
         qname = None
+        if not tega_id:
+            tega_id = self.tega_id
+
         if isinstance(path, Cont):
             qname = path.qname_()
         else:

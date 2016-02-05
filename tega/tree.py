@@ -385,16 +385,17 @@ class Cont(MutableMapping):
             out = {}
         for k,v in self.__dict__.items():
             type_v = type(v)
-            if not serialize_ephemeral and type_v == Cont and v.is_ephemeral_():
-                continue
             sk = str(k)
+            is_value = not sk.startswith('_')
+            if not serialize_ephemeral and is_value and v.is_ephemeral_():
+                continue
             if str_key: k = sk
-            if not sk.startswith('_'):
+            if is_value:
                 if type_v == Cont:
                     out[k] = {}
                 elif type_v == Bool or type_v == RPC or self.is_wrapped(v):
                     out[k] = v.serialize_(internal=internal)
-            elif internal and sk.startswith('_'):
+            elif internal and not is_value:
                 if type_v == Cont or internal and type_v == RPC:
                     s = v._getattr('_oid')
                     out[k] = s
@@ -404,7 +405,11 @@ class Cont(MutableMapping):
                     out[k] = v
 
             if k != '_parent' and isinstance(v, Cont):
-                v.serialize_(internal=internal, out=out[k], str_key=str_key)
+                v.serialize_(internal=internal, out=out[k], str_key=str_key,
+                        serialize_ephemeral=serialize_ephemeral)
+
+            if not internal and is_value and not out[k]:
+                del out[k]
 
         return out
 
@@ -486,16 +491,20 @@ class Cont(MutableMapping):
         version = self._version
         parent = self._parent
         oid = self._oid
+        ephemeral = self._ephemeral
         del self._version
         del self._parent
         del self._oid
+        del self._ephemeral
         c = copy.deepcopy(self)
         self._version = version
         self._parent = parent
         self._oid = oid
+        self._ephemeral = ephemeral
         c._parent = new_parent
         c._version = version
         c._oid = oid
+        c._ephemeral = ephemeral 
         self._deepcopy_parents(c)
         return c
     
@@ -512,6 +521,10 @@ class Cont(MutableMapping):
         del self._parent
         del self._oid
         del self._ephemeral
+        self._version = version
+        self._parent = parent
+        self._oid = oid
+        self._ephemeral = ephemeral
         c = copy.copy(self)
         c._parent = parent
         c._version = version
@@ -603,7 +616,10 @@ class Bool(Cont):
         else:
             return False
 
-    def serialize_(self, internal=False, out=None, str_key=False):
+    def serialize_(self, internal=False, out=None, str_key=False,
+            serialize_ephemeral=True):
+        if not serialize_ephemeral and self.is_ephemeral_():
+            return None
         if out is None:
             out = {}
         if internal:
@@ -653,7 +669,10 @@ class RPC(Cont):
         else:
             return False
 
-    def serialize_(self, internal=False, out=None, str_key=False):
+    def serialize_(self, internal=False, out=None, str_key=False,
+            serialize_ephemeral=True):
+        if not serialize_ephemeral and self.is_ephemeral_():
+            return None
         if out is None:
             out = {}
         if internal:

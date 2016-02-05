@@ -93,6 +93,12 @@ class TestSequence(unittest.TestCase):
         self.assertEqual(200, status)
         self.assertEqual(6, len(result.split()))  # Tue Jul 14 22:32:37 JST 2015
 
+    '''
+    2016/2/5
+
+    tega's collision detection and sync mechanism will be changed.
+
+
     def test_sync(self):
         inv = tega.tree.Cont('inventory')
         inv.ne1.b = 1
@@ -118,6 +124,7 @@ class TestSequence(unittest.TestCase):
         print(TestSequence.driver_g.log()[2])
         print("===== driver_l1.log ====")
         print(TestSequence.driver_l1.log()[2])
+        '''
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

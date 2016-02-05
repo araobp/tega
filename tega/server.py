@@ -236,7 +236,7 @@ class RestApiHandler(tornado.web.RequestHandler):
                 with tx_lock:
                     if txid in transactions:
                         t = transactions[txid]['tx']
-                        value = t.get(path, tega_id=tega_id, version=version)
+                        value = t.get(path, version=version)
             else:
                 value = tega.idb.get(url2path(id), version=version)
             if isinstance(value, Cont) or is_builtin_type(value):
@@ -256,6 +256,7 @@ class RestApiHandler(tornado.web.RequestHandler):
         version = self.get_argument('version', None)
         txid = self.get_argument('txid', None)
         tega_id = self.get_argument('tega_id')
+        ephemeral = self.get_argument('ephemeral', False)
         if version:
             version = int(version)
         path = url2path(id)
@@ -264,13 +265,15 @@ class RestApiHandler(tornado.web.RequestHandler):
             with tx_lock:
                 if txid in transactions:
                     t = transactions[txid]['tx']
-                    t.put(cont, tega_id=tega_id, version=version, deepcopy=False)
+                    t.put(cont, version=version, deepcopy=False,
+                            ephemeral=ephemeral)
                 else:
                     raise tornado.web.HTTPError(404)
         else:
             with tx(subscriber=_tega_id2subscriber(tega_id)) as t:
                 try:
-                    t.put(cont, tega_id=tega_id, version=version, deepcopy=False)
+                    t.put(cont, version=version, deepcopy=False,
+                            ephemeral=ephemeral)
                 except ValueError as e:
                     raise tornado.web.HTTPError(409)
 
@@ -288,14 +291,14 @@ class RestApiHandler(tornado.web.RequestHandler):
             with tx_lock:
                 if txid in transactions:
                     t = transactions[txid]['tx']
-                    t.delete(path, tega_id=tega_id, version=version)
+                    t.delete(path, version=version)
                 else:
                     raise tornado.web.HTTPError(404)
         else:
             tega_id = self.get_argument('tega_id')
             with tx(subscriber=_tega_id2subscriber(tega_id)) as t:
                 try:
-                    t.delete(path, tega_id=tega_id, version=version)
+                    t.delete(path, version=version)
                 except ValueError as e:
                     raise tornado.web.HTTPError(409)
 
