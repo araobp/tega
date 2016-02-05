@@ -104,10 +104,12 @@ Documentation
 - [subscription scope](./doc/subscription_scope.md)
 - [rpc routing](https://docs.google.com/drawings/d/1GHHYrF3s0MRypT_SxHkDAT-aFTfCtMh9NkqQrVEtvqo/pub?w=960&h=720)
 
-TODO(2016/01/10)
+TODO(2016/02/5)
 ----
-- develop tega driver for golang
-- support DCN with two-phase commit
+## Design change
+- CAP theorem: AP => CP
+![CP](https://docs.google.com/drawings/d/11fC2DojI9gzw-FV3NG8Ubh97sKm0RmWk-tNJBu1Tt-M/pub?w=600&h=480)
+
 
 References
 ----------
