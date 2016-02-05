@@ -108,6 +108,7 @@ TODO(2016/02/5)
 ----
 ## Design change
 - CAP theorem: AP => CP
+
 ![CP](https://docs.google.com/drawings/d/11fC2DojI9gzw-FV3NG8Ubh97sKm0RmWk-tNJBu1Tt-M/pub?w=600&h=480)
 
 
