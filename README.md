@@ -107,7 +107,8 @@ Documentation
 TODO(2016/02/5)
 ----
 ## Design change
-- CAP theorem: AP => CP
+
+Since tega db is for network config, it is not a good idea to take AP.
 
 ![CP](https://docs.google.com/drawings/d/11fC2DojI9gzw-FV3NG8Ubh97sKm0RmWk-tNJBu1Tt-M/pub?w=600&h=480)
 
