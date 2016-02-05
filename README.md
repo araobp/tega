@@ -112,6 +112,7 @@ Since tega db is for network config, it is not a good idea to take AP.
 
 ![CP](https://docs.google.com/drawings/d/11fC2DojI9gzw-FV3NG8Ubh97sKm0RmWk-tNJBu1Tt-M/pub?w=600&h=480)
 
+![Collision](https://docs.google.com/drawings/d/1D45tSElc7S4bnPCV_VLwJXua2O08Jv2gMqL4xeLaf2s/pub?w=600&h=480)
 
 References
 ----------
