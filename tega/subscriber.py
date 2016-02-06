@@ -65,6 +65,7 @@ class PlugIn(Subscriber):
             self._tega_id = self.__class__.__name__
         self._scope = scope
         self.subscribe(self.tega_id, SCOPE.GLOBAL)
+        tega.idb.add_tega_id(self.tega_id)
 
     @abstractmethod
     def initialize(self):

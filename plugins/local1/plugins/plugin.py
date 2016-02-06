@@ -21,12 +21,12 @@ class Subscriber1(tega.subscriber.PlugIn):
             a.x.f3 = self.func(max) 
             a.x.f4 = self.func(dict) 
             a.b.c = 'FUNC_TEST' 
-            t.put(a.x)
+            t.put(a.x, ephemeral=True)
             t.put(a.b.c)
             inventory.ne1.f1 = self.func(max)
-            t.put(inventory.ne1.f1)
+            t.put(inventory.ne1.f1, ephemeral=True)
             inventory.ne1.f2 = self.func(self.date)
-            t.put(inventory.ne1.f2)
+            t.put(inventory.ne1.f2, ephemeral=True)
 
     def on_notify(self, notifications):
         print('*** subscriber 1 on_notify ****')

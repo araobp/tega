@@ -27,7 +27,7 @@ class WGU624(tega.subscriber.PlugIn):
         inv = Cont('inventory')
         inv.homenet.wgu624.log = self.func(self.get_log)
         with self.tx() as t:
-            t.put(inv.homenet.wgu624.log)
+            t.put(inv.homenet.wgu624.log, ephemeral=True)
 
     def on_notify(self, notifications):
         pass

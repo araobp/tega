@@ -12,9 +12,9 @@ class GlobalPlugin1(tega.subscriber.PlugIn):
         inv = tega.tree.Cont('inventory')
         with self.tx() as t:
             inv.ne1.f5 = self.func(max)
-            t.put(inv.ne1.f5)
+            t.put(inv.ne1.f5, ephemeral=True)
             inv.ne1.f6 = self.func(self.date)
-            t.put(inv.ne1.f6)
+            t.put(inv.ne1.f6, ephemeral=True)
 
     def on_notify(self, notifications):
         pass
