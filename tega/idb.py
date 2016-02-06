@@ -160,7 +160,7 @@ def add_ephemeral_node(tega_id, path):
     Adds an ephemeral node.
     '''
     if not tega_id in tega_ids:
-        raise Exception('tega_id is None')
+        raise Exception('cannot add ephemeral node for unregisterred tega id')
     if not tega_id in _ephemeral_nodes:
         holder = set()
         _ephemeral_nodes[tega_id] = holder
@@ -509,9 +509,12 @@ class tx:
             else:  # wrapped built-in types such as wrapped_int
                 instance = instance.deepcopy_()
                 self._set_ephemeral(tega_id, instance, ephemeral)
-        elif isinstance(instance, Cont):
-            self._set_ephemeral(tega_id, instance, ephemeral)
-            instance.freeze_()
+        else:
+            if isinstance(instance, Cont):
+                self._set_ephemeral(tega_id, instance, ephemeral)
+                instance.freeze_()
+            elif ephemeral:
+                self._set_ephemeral(tega_id, instance, ephemeral)
         if ephemeral:
             add_ephemeral_node(tega_id, qname2path(qname))
         if version and _collision_check(qname, version):
@@ -543,8 +546,8 @@ class tx:
                 self.candidate[root_oid] = (prev_version, new_version, new_root)
 
             # Commit queue
-            if isinstance(instance, Cont):
-                instance = instance.deepcopy_()
+            #if isinstance(instance, Cont):
+            #    instance = instance.deepcopy_()
             if not ephemeral:
                 self._enqueue_commit(OPE.PUT, qname, tega_id, instance)
 

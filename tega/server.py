@@ -225,7 +225,7 @@ class RestApiHandler(tornado.web.RequestHandler):
         tega_id = self.get_argument('tega_id')
         if version:
             version = int(version)
-        if internal:
+        if internal == 'True':
             internal = True
         else:
             internal = False
@@ -259,6 +259,10 @@ class RestApiHandler(tornado.web.RequestHandler):
         ephemeral = self.get_argument('ephemeral', False)
         if version:
             version = int(version)
+        if ephemeral == 'True':
+            ephemeral = True
+        else:
+            ephemeral = False
         path = url2path(id)
         cont = subtree(path, data)
         if txid:

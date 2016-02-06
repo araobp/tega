@@ -22,7 +22,7 @@ readline.parse_and_bind('tab: complete')
 readline.parse_and_bind('set editing-mode vi')
 readline.set_history_length(HISTORY_LENGTH)
 
-operations = '|'.join(['get', 'geta', 'put', 'delete', 
+operations = '|'.join(['get', 'geta', 'put', 'pute', 'delete', 
     'begin', 'cancel', 'commit', 'subscribe', 'unsubscribe', 'publish'])
 cmd_pattern = re.compile('^(' + operations +
         ')\s+([\(\)\[\]=,\.\w\*]+)\s*(-*\d*)$|^(rollback)\s+([\w]+)\s+(-\d*)$|^(index)\s+([.\w]+)$')
@@ -30,7 +30,7 @@ rpc_pattern = re.compile('^[\.\w]+\([\w\s\'\"\,\.\/=-]*\)$')
 methods = {'get': OPE.GET.name, 'geta': OPE.GET.name,
     'put': OPE.PUT.name, 'delete': OPE.DELETE.name}
 HELP = '''
-[Database management]
+[Database management] (M)andatory, (O)ptional
 command    root version explanation
 ---------- ---- ------- -----------------------------------------------------
 h                       show this help
@@ -38,37 +38,38 @@ q                       quit
 id                      show tega ID of this CLI
 clear                   empty the database
 roots                   list root object IDs
-index       X           create an index for an object ID
+index       M           create an index for an object ID
 old                     list old root object IDs
 sync                    synchronize with global idb 
 log                     show the log cache
-rollback    X     X     rollback a specific root to a previous version
+rollback    M     M     rollback a specific root to a previous version
 ss                      take a snapshot
 plugins                 show plugins attached to the tega db
 
-[CRUD operations]
-command    path version explanation
----------- ---- ------- -----------------------------------------------------
-put         X     X     CRUD create/update operation
-get         X     X     CRUD read operation
-geta        X     X     CRUD read operation with internal attributes
-delete      X     X     CRUD delete operation
-begin                   begin a transaction
-cand                    show a candidate config (not implemented yet)
-cancel                  cancel a transaction
-commit                  commit a transaction
+[CRUD operations] (M)andatory, (O)ptional, (X) -s option required
+command    path version -s  explanation
+---------- ---- ------- --- -------------------------------------------------
+put         M     O         CRUD create/update operation
+pute        M     O      X  CRUD create/update operation (ephemeral node)
+get         M     O         CRUD read operation
+geta        M     O         CRUD read operation with internal attributes
+delete      M     O         CRUD delete operation
+begin                       begin a transaction
+cand                        show a candidate config (not implemented yet)
+cancel                      cancel a transaction
+commit                      commit a transaction
 
-[PubSub]
-command    path version explanation
----------- ---- ------- -----------------------------------------------------
-subscribe   X           subscribe a path as a pubsub channel
-unsubscribe X           unsubscribe a path as a pubsub channel
-publish     X           publish a message to subscribers
-ids                     show all tega IDs of plugins and drivers
-channels                show channels
-global                  show global channels (global or sync)
-subscribers             show subscribers
-forwarders              show subscribe forwarders
+[PubSub] (M)andatory, (O)ptional, (X) -s option required
+command    path version -s  explanation
+---------- ---- ------- --- -------------------------------------------------
+subscribe   M            X  subscribe a path as a pubsub channel
+unsubscribe M            X  unsubscribe a path as a pubsub channel
+publish     M            X  publish a message to subscribers
+ids                         show all tega IDs of plugins and drivers
+channels                    show channels
+global                      show global channels (global or sync)
+subscribers                 show subscribers
+forwarders                  show subscribe forwarders
 
 "unsubscribe *" to subscribe all channels
 
@@ -205,7 +206,7 @@ def process_cmd(tornado_loop=False):
                     print('{} {}'.format(status, reason))
                 else:
                     body = None
-                    if ope == 'put' or ope == 'publish':
+                    if ope in ('put', 'pute', 'publish'):
                         buf = io.StringIO()
                         while True:
                             cmd = input()
@@ -218,7 +219,7 @@ def process_cmd(tornado_loop=False):
                     params = []
                     url_params = '' 
                     kwargs = {}
-                    if ope == 'put':
+                    if ope in ('put', 'pute'):
                         instance = subtree(path, body)
                         kwargs['instance'] = instance 
                     elif ope == 'publish':
@@ -232,6 +233,9 @@ def process_cmd(tornado_loop=False):
                     if ope == 'geta':
                         ope = 'get'
                         kwargs['internal'] = True 
+                    if ope == 'pute':
+                        ope = 'put'
+                        kwargs['ephemeral'] = True
                     if version != '':
                         kwargs['version'] = version
                     try:
@@ -299,6 +303,3 @@ def main():
         driver = Driver(args.address, args.port, subscriber=None)
         while True:
             process_cmd()
-
-
-

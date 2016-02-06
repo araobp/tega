@@ -175,12 +175,13 @@ class Driver(object):
             raise CRUDException('{} {}'.format(
                 response.status, response.reason))
 
-    def put(self, instance, version=None):
+    def put(self, instance, version=None, ephemeral=False):
         '''
         CRUD create/update operation
         '''
         url = self._urlencode(instance2url(instance), txid=self.txid,
-                             version=version, tega_id=self.tega_id)
+                             version=version, tega_id=self.tega_id,
+                             ephemeral=ephemeral)
         body_json = instance.dumps_()
         response, body = self.conn.request(url, PUT, body_json, HEADERS)
         self._response_check(response)
