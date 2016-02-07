@@ -1021,7 +1021,8 @@ def save_snapshot(tega_id):
     seq_no = newest_commit_log(server_tega_id, _log_dir) + 1  # Increments the log seq number
     _idb_snapshot = {}
     for root_oid in _idb:
-        _idb_snapshot[root_oid] = _idb[root_oid].serialize_(internal=True)
+        _idb_snapshot[root_oid] = _idb[root_oid].serialize_(internal=True,
+                serialize_ephemeral=False)
 
     log_file_name = 'log.{}.{}'.format(server_tega_id, seq_no)
     log_file = os.path.join(_log_dir, log_file_name)

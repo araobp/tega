@@ -386,16 +386,16 @@ class Cont(MutableMapping):
         for k,v in self.__dict__.items():
             type_v = type(v)
             sk = str(k)
-            is_value = not sk.startswith('_')
-            if not serialize_ephemeral and is_value and v.is_ephemeral_():
+            is_child_or_value = not sk.startswith('_')
+            if not serialize_ephemeral and is_child_or_value and v.is_ephemeral_():
                 continue
             if str_key: k = sk
-            if is_value:
+            if is_child_or_value:
                 if type_v == Cont:
                     out[k] = {}
                 elif type_v == Bool or type_v == RPC or self.is_wrapped(v):
                     out[k] = v.serialize_(internal=internal)
-            elif internal and not is_value:
+            elif internal and not is_child_or_value:
                 if type_v == Cont or internal and type_v == RPC:
                     s = v._getattr('_oid')
                     out[k] = s
@@ -408,7 +408,7 @@ class Cont(MutableMapping):
                 v.serialize_(internal=internal, out=out[k], str_key=str_key,
                         serialize_ephemeral=serialize_ephemeral)
 
-            if not internal and is_value and not out[k]:
+            if is_child_or_value and not serialize_ephemeral and not out[k]:
                 del out[k]
 
         return out

@@ -73,6 +73,11 @@ class TestSequence(unittest.TestCase):
     #def test_(self):
     #    time.sleep(1000)
 
+    '''
+    2016/2/5
+
+    tega's collision detection and sync mechanism will be changed.
+
     def test_rpc(self):
         F1 = 'inventory.ne1.f1'
         F2 = 'inventory.ne1.f2'
@@ -92,12 +97,6 @@ class TestSequence(unittest.TestCase):
         status, reason, result = TestSequence.driver_l2.rpc(F2)
         self.assertEqual(200, status)
         self.assertEqual(6, len(result.split()))  # Tue Jul 14 22:32:37 JST 2015
-
-    '''
-    2016/2/5
-
-    tega's collision detection and sync mechanism will be changed.
-
 
     def test_sync(self):
         inv = tega.tree.Cont('inventory')
