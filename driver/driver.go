@@ -27,7 +27,7 @@ const (
 	GET    = "GET"
 	PUT    = "PUT"
 	DELETE = "DELETE"
-	PATCH = "PATCH"
+	PATCH  = "PATCH"
 )
 
 // PUBSUB-related constants
@@ -331,7 +331,7 @@ func (ope *Operation) RegisterRpc(path string, rpc func(ArgsKwargs) (Result, err
 	funcNameSlice := strings.Split(funcFullName, ".")
 	funcName := funcNameSlice[len(funcNameSlice)-1]
 	funcStr := fmt.Sprintf("%%%s.%s", ope.tegaId, funcName)
-	err := ope.Put(path, funcStr)
+	err := ope.PutE(path, funcStr)
 	if err != nil {
 		log.Print(err)
 	}
