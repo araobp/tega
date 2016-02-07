@@ -248,6 +248,28 @@ class RestApiHandler(tornado.web.RequestHandler):
             logging.info('path "{}" not found in global idb'.format(path))
             raise tornado.web.HTTPError(400)
 
+    def patch(self, id):
+        '''
+        Sets the node ephemeral
+        '''
+        txid = self.get_argument('txid', None)
+        tega_id = self.get_argument('tega_id')
+        path = url2path(id)
+        cont = subtree(path, dict())
+        if txid:
+            with tx_lock:
+                if txid in transactions:
+                    t = transactions[txid]['tx']
+                    t.put(cont, version=version, deepcopy=False, ephemeral=True)
+                else:
+                    raise tornado.web.HTTPError(404)
+        else:
+            with tx(subscriber=_tega_id2subscriber(tega_id)) as t:
+                try:
+                    t.put(cont, deepcopy=False, ephemeral=True)
+                except ValueError as e:
+                    raise tornado.web.HTTPError(409)
+
     def put(self, id):
         '''
         PUT(create/update) operation

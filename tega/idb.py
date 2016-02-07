@@ -43,6 +43,7 @@ class OPE(Enum):
     GET = 2
     PUT = 3
     DELETE = 4 
+    PATCH = 5
 
 class POLICY(Enum):
     '''

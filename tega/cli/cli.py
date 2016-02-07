@@ -22,7 +22,7 @@ readline.parse_and_bind('tab: complete')
 readline.parse_and_bind('set editing-mode vi')
 readline.set_history_length(HISTORY_LENGTH)
 
-operations = '|'.join(['get', 'geta', 'put', 'pute', 'delete', 
+operations = '|'.join(['get', 'geta', 'put', 'pute', 'ephemeral', 'delete', 
     'begin', 'cancel', 'commit', 'subscribe', 'unsubscribe', 'publish'])
 cmd_pattern = re.compile('^(' + operations +
         ')\s+([\(\)\[\]=,\.\w\*]+)\s*(-*\d*)$|^(rollback)\s+([\w]+)\s+(-\d*)$|^(index)\s+([.\w]+)$')
@@ -51,6 +51,7 @@ command    path version -s  explanation
 ---------- ---- ------- --- -------------------------------------------------
 put         M     O         CRUD create/update operation
 pute        M     O      X  CRUD create/update operation (ephemeral node)
+ephemeral   M            X  set the node ephemeral
 get         M     O         CRUD read operation
 geta        M     O         CRUD read operation with internal attributes
 delete      M     O         CRUD delete operation

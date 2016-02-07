@@ -27,6 +27,7 @@ const (
 	GET    = "GET"
 	PUT    = "PUT"
 	DELETE = "DELETE"
+	PATCH = "PATCH"
 )
 
 // PUBSUB-related constants
@@ -67,7 +68,6 @@ type Operation struct {
 	host       string
 	port       int
 	version    int
-	path       string
 	ws         *websocket.Conn
 	subscriber Subscriber
 	rpcs       map[string]func(ArgsKwargs) (Result, error)
@@ -135,7 +135,6 @@ func NewOperation(tegaId string, host string, port int, subscriber Subscriber, s
 				host:       host,
 				port:       port,
 				version:    -1,
-				path:       "",
 				ws:         ws,
 				subscriber: subscriber,
 				rpcs:       make(map[string]func(ArgsKwargs) (Result, error)),
@@ -215,22 +214,24 @@ func (ope *Operation) wsReader() {
 	}
 }
 
-func (ope *Operation) urlEncode() *string {
+func (ope *Operation) urlEncode(path string, ephemeral bool) *string {
 	values := url.Values{}
 	if ope.version >= 0 {
 		version := strconv.Itoa(ope.version)
 		values.Add("version", version)
 	}
 	values.Add("tega_id", ope.tegaId)
-	path := strings.Replace(ope.path, ".", "/", -1)
+	if ephemeral {
+		values.Add("ephemeral", "True")
+	}
+	path = strings.Replace(path, ".", "/", -1)
 	url := "http://" + ope.host + ":" + strconv.Itoa(ope.port) + "/" + path + "/?" + values.Encode()
 	return &url
 }
 
 // CRUD read operation
 func (ope *Operation) Get(path string, instance interface{}) error {
-	ope.path = path
-	url := ope.urlEncode()
+	url := ope.urlEncode(path, false)
 	resp, err := http.Get(*url)
 	defer resp.Body.Close()
 	var body []byte
@@ -243,10 +244,8 @@ func (ope *Operation) Get(path string, instance interface{}) error {
 	return err
 }
 
-// CRUD create/update operation
-func (ope *Operation) Put(path string, instance interface{}) error {
-	ope.path = path
-	url := ope.urlEncode()
+func (ope *Operation) put(path string, instance interface{}, ephemeral bool) error {
+	url := ope.urlEncode(path, ephemeral)
 	var err error = nil
 	var body []byte
 	body, err = json.Marshal(instance)
@@ -261,10 +260,34 @@ func (ope *Operation) Put(path string, instance interface{}) error {
 	return err
 }
 
+// CRUD create/update operation
+func (ope *Operation) Put(path string, instance interface{}) error {
+	return ope.put(path, instance, false)
+}
+
+// CRUD create/update operation for an ephemeral node
+func (ope *Operation) PutE(path string, instance interface{}) error {
+	return ope.put(path, instance, true)
+}
+
+// Sets the node ephemeral
+func (ope *Operation) Ephemeral(path string) error {
+	url := ope.urlEncode(path, false)
+	var err error = nil
+	if err == nil {
+		client := &http.Client{}
+		var request *http.Request
+		var response *http.Response
+		request, err = http.NewRequest(PATCH, *url, nil)
+		response, err = client.Do(request)
+		defer response.Body.Close()
+	}
+	return err
+}
+
 // CRUD delete operation
 func (ope *Operation) Delete(path string) error {
-	ope.path = path
-	url := ope.urlEncode()
+	url := ope.urlEncode(path, false)
 	var err error = nil
 	if err == nil {
 		client := &http.Client{}
