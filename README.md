@@ -13,16 +13,15 @@ MD-SAL-like database for small PCs (incl. Raspberry Pi), written in Python:
 - Python and Go driver
 - Easy to use
 ```
-$ ./cli -s
+$ ./cli
 tega CLI (q: quit, h:help)
-[tega: 0] --- session ready ---
-[tega: 1] pute a.b.c
+[tega: 0] put a.b.c
 1
 
-[tega: 2] put a.x
+[tega: 1] put a.x
 2
 
-[tega: 3] get a
+[tega: 2] get a
 b: {c: 1}
 x: 2
 ```
