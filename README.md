@@ -30,6 +30,7 @@ x: 2
 - Simplicity rather than high-performance and rigid schema
 - NOSQL for non big data (small data)
 - Embeddable data base
+- Focus on config data management
 - Easy-to-use APIs
 - Concurrenty support with coroutine
 
