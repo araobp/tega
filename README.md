@@ -1,5 +1,4 @@
-tega db
-=======
+#tega db
 
 Project start: 2014/8/8
 
@@ -12,9 +11,23 @@ MD-SAL-like database for small PCs (incl. Raspberry Pi), written in Python:
 - Extensible with plugins
 - NAT traversal (HTTP/WebSocket)
 - Python and Go driver
+- Easy to use
+```
+$ ./cli -s
+tega CLI (q: quit, h:help)
+[tega: 0] --- session ready ---
+[tega: 1] pute a.b.c
+1
 
-Design policy
--------------
+[tega: 2] put a.x
+2
+
+[tega: 3] get a
+b: {c: 1}
+x: 2
+```
+
+##Design policy
 - Simplicity rather than high-performance and rigid schema
 - NOSQL for non big data (small data)
 - Embeddable data base
