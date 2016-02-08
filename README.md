@@ -95,6 +95,7 @@ as of 2015/6/14
 
 Documentation
 -------------
+- [CLI command usage](.doc/usage.md)
 - [tree structure](./doc/tree.png)
 - [operations to the tree](https://docs.google.com/drawings/d/1KOUuiQcosYpfEi4HyF7BYsiiSEW_2rJsZKy9xIPuIZQ/pub?w=960&h=720)
 - [tree structure implemention: Cont class and its attributes](./doc/attributes.md)
