@@ -18,6 +18,10 @@ type B struct {
 type Self struct {
 }
 
+func (r *Self) OnInit() {
+	log.Print("OnInit()")
+}
+
 func (r *Self) OnNotify(v *[]Notification) {
 	log.Print("Notify: %s", *v)
 	for _, i := range *v {

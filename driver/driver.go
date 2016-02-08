@@ -44,6 +44,7 @@ const (
 // Tega protocol over WebSocket
 const (
 	SESSION = "SESSION"
+	SESSIONACK = "SESSIONACK"
 )
 
 // Subscribe mode
@@ -104,7 +105,14 @@ type Message struct {
 
 // Subscriber interface for call back functions on NOTIFY and MESSAGE
 type Subscriber interface {
+
+	// Driver initialization completed: SESSIONACK has just been received
+	OnInit()
+
+	// Data Change Notifications
 	OnNotify(*[]Notification)
+
+	// Published message
 	OnMessage(channel string, tegaId string, message *Message)
 }
 
@@ -161,6 +169,12 @@ func (ope *Operation) wsReader() {
 			lines := strings.Split(wsMessage, "\n")
 			line := strings.Split(lines[0], " ")
 			cmd := line[0]
+
+			if cmd == SESSIONACK {
+				ope.subscriber.OnInit()
+				continue
+			}
+
 			params := line[1:]
 			body := lines[1]
 

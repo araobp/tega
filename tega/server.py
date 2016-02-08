@@ -368,6 +368,7 @@ class PubSubHandler(tornado.websocket.WebSocketHandler):
                 tega.idb.add_subscribe_forwarder(self.subscriber)
             subscriber_clients[self.tega_id] = self.subscriber
             tega.idb.add_tega_id(self.tega_id)
+            self.write_message('SESSIONACK')
         elif cmd == 'SUBSCRIBE':
             if param:
                 channel = param[0]

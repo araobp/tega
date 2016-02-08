@@ -360,7 +360,14 @@ class Driver(object):
             scope = self.subscriber.scope.value
         else:
             scope = SCOPE.LOCAL.value
+
         self._send(cmd='SESSION', qs=[self.tega_id, scope])
+
+        message = yield self.client.read_message()
+        cmd, qs, body = self.parser(message)
+        assert(cmd == 'SESSIONACK')
+        self.subscriber.on_init()
+
         while self.client:
             message = yield self.client.read_message()
             if not message:  # TODO: "WebSocket is disconnected" handler

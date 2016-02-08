@@ -37,6 +37,13 @@ class Subscriber(object):
         return self._scope
 
     @abstractmethod
+    def on_init(self):
+        '''
+        Driver initialization completed.
+        '''
+        pass
+
+    @abstractmethod
     def on_notify(self, notifications):
         '''
         Notifications in the form of [{},...].

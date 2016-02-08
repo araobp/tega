@@ -24,10 +24,12 @@ def build_parser(direction):
 
         seq_no                  = 1*DIGIT
         tega_id                 = 1*( ALPHA / DIGIT / "-" / "_" )
-        TEGA-websocket-message  = Session / Subscribe / Unsubscribe / Publish /
-                                  Notify / Message / Request / Response
+        TEGA-websocket-message  = Session / SessionAck / Subscribe /
+                                  Unsubscribe / Publish / Notify / Message /
+                                  Request / Response
         TEGA-scope              = "global" / "local" / "sync"
         Session                 = "SESSION" SP tega_id SP TEGA-scope
+        SessionAck              = "SESSIONACK"
         Subscribe               = "SUBSCRIBE" SP path SP TEGA-scope
         Unsubscribe             = "UNSUBSCRIBE" SP path
         Notify                  = "NOTIFY" CRLF notifications

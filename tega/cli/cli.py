@@ -258,6 +258,10 @@ class CLISubscriber(Subscriber):
     def __init__(self, tega_id):
         super().__init__(tega_id)
 
+    def on_init(self):
+        print('--- session ready ---')
+        prompt()
+
     def on_notify(self, notifications):
         print('')
         print('<NOTIFY>')
