@@ -404,7 +404,7 @@ class tx:
             else:  # get()
                 qname = crud[1]
                 tega_id = crud[2]
-                self._enqueue_commit(OPE.GET, qname, tega_id, None)
+                self._enqueue_commit(OPE.GET, qname, tega_id, None, False)
 
         if len(self.commit_queue) > 0:
             finish_marker = COMMIT_FINISH_MARKER+'{}:{}'.format(time.time(),
@@ -440,11 +440,9 @@ class tx:
                 _old_roots[root_oid].append((prev_version, old_root))
 
         # Notifies the commited transaction to subscribers
-        for log in self.commit_queue:
-            self._notify_append(log)
         self._notify_commit(self.subscriber)
 
-    def _enqueue_commit(self, ope, qname, tega_id, instance):
+    def _enqueue_commit(self, ope, qname, tega_id, instance, ephemeral):
         '''
         Appends CRUD to the commit queue.
         '''
@@ -457,8 +455,12 @@ class tx:
         if instance and isinstance(instance, Cont):
             instance = instance.serialize_()
 
-        self.commit_queue.append(log_entry(ope=ope.name, path=path, tega_id=tega_id,
-                                 instance=instance))
+        log = log_entry(ope=ope.name, path=path, tega_id=tega_id, instance=instance)
+
+        if not ephemeral:
+            self.commit_queue.append(log)
+
+        self._notify_append(log)
 
     def get(self, path, version=None, tega_id=None):
         '''
@@ -549,8 +551,7 @@ class tx:
             # Commit queue
             #if isinstance(instance, Cont):
             #    instance = instance.deepcopy_()
-            if not ephemeral:
-                self._enqueue_commit(OPE.PUT, qname, tega_id, instance)
+            self._enqueue_commit(OPE.PUT, qname, tega_id, instance, ephemeral)
 
     def delete(self, path, tega_id=None, version=None):
         '''
@@ -560,7 +561,7 @@ class tx:
         '''
         self.crud_queue.append((self._delete, path, tega_id, version))
 
-    def _delete(self, path, tega_id=None, version=None, ephemeral=False):
+    def _delete(self, path, tega_id=None, version=None):
 
         qname = None
         if not tega_id:
@@ -605,10 +606,10 @@ class tx:
                                             new_version, new_root)
 
             # Commit queue
-            if instance.is_ephemeral_():
+            ephemeral = instance.is_ephemeral_()
+            if ephemeral:
                 remove_ephemeral_node(tega_id, path)
-            else:
-                self._enqueue_commit(OPE.DELETE, qname, tega_id, instance)
+            self._enqueue_commit(OPE.DELETE, qname, tega_id, instance, ephemeral)
 
     def get_candidate(self):
         '''
