@@ -18,7 +18,6 @@ POST = OPE.POST.name
 PUT = OPE.PUT.name 
 GET = OPE.GET.name 
 DELETE = OPE.DELETE.name 
-PATCH = OPE.PATCH.name
 
 def _build_urlencode(base_url):
     def _urlencode(path_, **kwargs):
@@ -175,19 +174,6 @@ class Driver(object):
         if response.status >= 300 or response.status < 200:
             raise CRUDException('{} {}'.format(
                 response.status, response.reason))
-
-    def ephemeral(self, instance=None, path=None):
-        '''
-        Sets the node ephemeral
-        '''
-        if instance:
-            url = self._urlencode(instance2url(instance), txid=self.txid,
-                                 tega_id=self.tega_id)
-        elif path:
-            url = self._urlencode(path2url(path), txid=self.txid,
-                                 tega_id=self.tega_id)
-        response, body = self.conn.request(url, PATCH , None, HEADERS)
-        self._response_check(response)
 
     def put(self, instance, version=None, ephemeral=False):
         '''

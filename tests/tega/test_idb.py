@@ -265,6 +265,12 @@ class TestSequence(unittest.TestCase):
         self.assertEqual(d1a, d2a)
         self.assertEqual(d1b, d2b)
 
+        def _non_ephemeral_node():
+            with tega.idb.tx(tega_id=OWNER) as t:
+                r.a.b = 1
+                t.put(r.a.b, ephemeral=True)
+        self.assertRaises(Exception, _non_ephemeral_node)
+
         instance = tega.idb.get('r')
         d1a = {'a': {'b': 1}, 'A': {'b': 3}}
         d1b = {'a': {'b': 1, 'c': 2}, 'A': {'b': 3}, 'B': {'c': 4}}

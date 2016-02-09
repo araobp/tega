@@ -404,7 +404,7 @@ class tx:
             else:  # get()
                 qname = crud[1]
                 tega_id = crud[2]
-                self._enqueue_commit(OPE.GET, qname, tega_id, None, False)
+                self._enqueue_commit(OPE.GET, path, tega_id, None, False)
 
         if len(self.commit_queue) > 0:
             finish_marker = COMMIT_FINISH_MARKER+'{}:{}'.format(time.time(),
@@ -442,7 +442,7 @@ class tx:
         # Notifies the commited transaction to subscribers
         self._notify_commit(self.subscriber)
 
-    def _enqueue_commit(self, ope, qname, tega_id, instance, ephemeral):
+    def _enqueue_commit(self, ope, path, tega_id, instance, ephemeral):
         '''
         Appends CRUD to the commit queue.
         '''
@@ -450,7 +450,6 @@ class tx:
             tega_id = self.tega_id
         else:
             pass  # CRUD initiated by a notification or a tega db driver.
-        path = qname2path(qname)
 
         if instance and isinstance(instance, Cont):
             instance = instance.serialize_()
@@ -471,10 +470,9 @@ class tx:
         represented as a log.
 
         '''
-        qname = path2qname(path)
         try:
             value = get(path, version)
-            self.crud_queue.append((None, qname, tega_id, False))
+            self.crud_queue.append((None, path, tega_id, False))
             return value
         except KeyError:
             logging.debug('GET failed with the non-existent path: {}'.format(path))
@@ -493,38 +491,30 @@ class tx:
         self.crud_queue.append((self._put, instance, tega_id, version, deepcopy,
             ephemeral))
 
-    def _set_ephemeral(self, owner_id, instance, ephemeral):
-        if ephemeral:
-            instance.ephemeral_()
-
     def _put(self, instance, tega_id=None, version=None, deepcopy=True,
             ephemeral=False):
 
         qname = instance.qname_()
+        path = qname2path(qname)
         if not tega_id:
             tega_id = self.tega_id
 
         if deepcopy:
-            if isinstance(instance, Cont):
-                instance = instance.deepcopy_()
-                self._set_ephemeral(tega_id, instance, ephemeral)
-                instance.freeze_()
-            else:  # wrapped built-in types such as wrapped_int
-                instance = instance.deepcopy_()
-                self._set_ephemeral(tega_id, instance, ephemeral)
-        else:
-            if isinstance(instance, Cont):
-                self._set_ephemeral(tega_id, instance, ephemeral)
-                instance.freeze_()
-            elif ephemeral:
-                self._set_ephemeral(tega_id, instance, ephemeral)
+            instance = instance.deepcopy_()
+
         if ephemeral:
-            add_ephemeral_node(tega_id, qname2path(qname))
+            instance.ephemeral_()
+            try:
+                instance_ = get(path)
+                if not instance_.is_ephemeral_():
+                    raise Exception('non-ephemeral node cannot be ephemeral')
+            except KeyError:
+                pass
+            add_ephemeral_node(tega_id, path)
+
         if version and _collision_check(qname, version):
             raise ValueError('collision detected')
         else:
-            root_oid = qname[0]
-
             #
             # PUT OPERATION
             #
@@ -539,6 +529,9 @@ class tx:
             #       |             change parent(replace) (D)
             #      put operation
             #
+            if isinstance(instance, Cont):
+                instance.freeze_()
+            root_oid = qname[0]
             prev_version, new_version, new_root, above_tail = self._copy_on_write(qname, above_tail=True)
             self._instance_version_set(instance, new_version)
             if above_tail:
@@ -551,7 +544,7 @@ class tx:
             # Commit queue
             #if isinstance(instance, Cont):
             #    instance = instance.deepcopy_()
-            self._enqueue_commit(OPE.PUT, qname, tega_id, instance, ephemeral)
+            self._enqueue_commit(OPE.PUT, path, tega_id, instance, ephemeral)
 
     def delete(self, path, tega_id=None, version=None):
         '''
@@ -571,7 +564,6 @@ class tx:
             qname = path.qname_()
         else:
             qname = path2qname(path)
-        root_oid = qname[0]
 
         if version and _collision_check(qname, version):
             raise ValueError('collision detected')
@@ -591,6 +583,7 @@ class tx:
             #       |
             #      delete operation
             #
+            root_oid = qname[0]
             prev_version, new_version, new_root, above_tail = self._copy_on_write(qname, above_tail=True)
             if above_tail:
                 oid = qname[-1]
@@ -609,7 +602,7 @@ class tx:
             ephemeral = instance.is_ephemeral_()
             if ephemeral:
                 remove_ephemeral_node(tega_id, path)
-            self._enqueue_commit(OPE.DELETE, qname, tega_id, instance, ephemeral)
+            self._enqueue_commit(OPE.DELETE, path, tega_id, instance, ephemeral)
 
     def get_candidate(self):
         '''
