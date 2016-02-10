@@ -59,13 +59,8 @@ class TestSequence(unittest.TestCase):
         r.a.b
         self.assertTrue(r.a.b.is_empty())
 
-        r.a.x()
-        self.assertTrue(r.a.x.is_empty())
-
     def test_set_(self):
         r = tega.tree.Cont('r')
-        r.a(x=1,y=2).set_('Alice')
-        self.assertEqual('Alice', r.a(x=1,y=2))
         r.b.set_('Bob')
         self.assertEqual('Bob', r.b)
 
@@ -114,14 +109,7 @@ class TestSequence(unittest.TestCase):
 
         r.a = tega.tree.Func('id1', dict) 
         self.assertEqual(tega.tree.RPC, type(r.a))
-        self.assertEqual(dict(x=1,y='2'), r.a(x=1,y='2'))
         self.assertEqual(['r', 'a'], r.a.qname_())
-
-        del r.a
-        r.a(id=1,name='Alice').location = 'Tokyo'
-        self.assertEqual(r._get_wrapped_type(str),
-                type(r.a(id=1,name='Alice').location))
-        self.assertEqual('Tokyo', r.a(id=1,name='Alice').location)
 
         del r.a
         r.a[0] = 0
@@ -161,8 +149,7 @@ class TestSequence(unittest.TestCase):
 
     def test__call__(self):
         r = tega.tree.Cont('r')
-        r.a()
-        self.assertEqual(None, r.a._getattr('_presence'))
+        self.assertFalse(r.a.is_ephemeral_())
 
     def test_freeze_(self):
         r = tega.tree.Cont('r')
@@ -234,12 +221,9 @@ class TestSequence(unittest.TestCase):
         self.assertTrue(r.a.x.is_ephemeral_())
 
     def test_qname(self):
-        from tega.frozendict import frozendict
         r = tega.tree.Cont('r')
-        z = r.a.b(id=1).c[0]
-        z.d = 1
-        self.assertEqual(['r', 'a', 'b', frozendict(id=1), 'c', 0, 'd'],
-                z.d.qname_())
+        r.a.b = 1
+        self.assertEqual(['r', 'a', 'b'], r.a.b.qname_())
 
     def test_subtree_(self):
         r = tega.tree.Cont('r')

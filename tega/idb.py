@@ -1,7 +1,7 @@
 from tega.subscriber import SCOPE
 from tega.messaging import request, REQUEST_TYPE
 from tega.tree import Cont, RPC
-from tega.util import path2qname, qname2path, dict2cont, subtree, newest_commit_log
+from tega.util import path2qname, qname2path, dict2cont, subtree, deserialize, newest_commit_log
 
 import copy
 from enum import Enum
@@ -43,7 +43,7 @@ class OPE(Enum):
     GET = 2
     PUT = 3
     DELETE = 4 
-    PATCH = 5
+    SS = 5
 
 class POLICY(Enum):
     '''
@@ -399,12 +399,7 @@ class tx:
         '''
         for crud in self.crud_queue:
             func = crud[0]
-            if func:  # put() or delete()
-                crud[0](*crud[1:])
-            else:  # get()
-                qname = crud[1]
-                tega_id = crud[2]
-                self._enqueue_commit(OPE.GET, path, tega_id, None, False)
+            crud[0](*crud[1:])
 
         if len(self.commit_queue) > 0:
             finish_marker = COMMIT_FINISH_MARKER+'{}:{}'.format(time.time(),
@@ -470,13 +465,7 @@ class tx:
         represented as a log.
 
         '''
-        try:
-            value = get(path, version)
-            self.crud_queue.append((None, path, tega_id, False))
-            return value
-        except KeyError:
-            logging.debug('GET failed with the non-existent path: {}'.format(path))
-            raise
+        return get(path, version)
 
     def put(self, instance, tega_id=None, version=None, deepcopy=True,
             path=None, ephemeral=False):
@@ -511,7 +500,6 @@ class tx:
             except KeyError:
                 pass
             add_ephemeral_node(tega_id, path)
-
         if version and _collision_check(qname, version):
             raise ValueError('collision detected')
         else:
@@ -534,6 +522,7 @@ class tx:
             root_oid = qname[0]
             prev_version, new_version, new_root, above_tail = self._copy_on_write(qname, above_tail=True)
             self._instance_version_set(instance, new_version)
+
             if above_tail:
                 instance.change_(above_tail)
             else:
@@ -542,8 +531,6 @@ class tx:
                 self.candidate[root_oid] = (prev_version, new_version, new_root)
 
             # Commit queue
-            #if isinstance(instance, Cont):
-            #    instance = instance.deepcopy_()
             self._enqueue_commit(OPE.PUT, path, tega_id, instance, ephemeral)
 
     def delete(self, path, tega_id=None, version=None):
@@ -595,8 +582,7 @@ class tx:
             else:
                 instance = _idb[path]
             if not root_oid in self.candidate:
-                self.candidate[root_oid] = (prev_version,
-                                            new_version, new_root)
+                self.candidate[root_oid] = (prev_version, new_version, new_root)
 
             # Commit queue
             ephemeral = instance.is_ephemeral_()
@@ -844,10 +830,11 @@ def reload_log():
                     path = crud[1]
                     tega_id = crud[2]
                     t.delete(path, tega_id=tega_id)
-                elif ope == OPE.GET:
-                    pass
             t.commit(write_log=False)
             del multi[:]
+        elif line.startswith(COMMIT_FINISH_MARKER):
+            pass
+        # TODO: the block below is to be removed.
         elif line.startswith(COMMIT_START_MARKER) or line.startswith(SYNC_CONFIRMED_MARKER):
             _log_cache.append(line)
         else:
@@ -864,8 +851,10 @@ def reload_log():
                 multi.append((OPE.PUT, root, tega_id))
             elif ope == OPE.DELETE.name:
                 multi.append((OPE.DELETE, path, tega_id))
-            elif ope == OPE.GET.name:
-                multi.append((OPE.GET,))
+            elif ope == OPE.SS.name:
+                root_oid = instance['_oid']
+                root = deserialize(instance)
+                _idb[root_oid] = root
 
 def crud_batch(notifications, subscriber=None):
     '''
@@ -1027,7 +1016,7 @@ def save_snapshot(tega_id):
 
     _log_fd.write(COMMIT_START_MARKER+'\n')  # commit start
     for root_oid, instance in _idb_snapshot.items():
-        log = log_entry(ope=OPE.PUT.name, path=root_oid, tega_id=tega_id, instance=instance)
+        log = log_entry(ope=OPE.SS.name, path=root_oid, tega_id=tega_id, instance=instance)
         log = str(log)
         _log_fd.write(log+'\n')
     _log_fd.write(finish_marker+'\n')  # commit finish marker

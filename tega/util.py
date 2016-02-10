@@ -1,4 +1,4 @@
-from tega.frozendict import frozendict
+from tega.tree import Cont
 
 import copy
 import os
@@ -8,45 +8,13 @@ def path2qname(path):
     '''
     path('a.b.c') to qname(['a', 'b', 'c'])
     '''
-    qname = []
-    for v in path.split('.'):
-        if v.endswith(')'): # aaa(a=1, b=2)
-            v_v = v.rstrip(')').split('(')  # ['aaa', 'a=1, b=2']
-            args = v_v[1].replace(' ', '').split(',')  # ['a=1, 'b=2']
-            kwargs = {}
-            for arg in args:
-                kv = arg.split('=')
-                k_ = kv[0]
-                v_ = kv[1]
-                if v_.isdigit():
-                    v_ = int(v_)
-                kwargs[k_] = v_
-            dict_ = frozendict(**kwargs)  # (a=1, b=2)
-            qname.append(v_v[0])  # 'aaa'
-            qname.append(dict_)  # (a=1, b=2)
-        elif v.endswith(']'):
-            v_v = v.rstrip(']').split('[')
-            k_ = v_v[0]
-            k_dim = v_v[1]
-            qname.append(k_)
-            qname.append(k_dim)
-        else:
-            qname.append(v)
-    return qname
+    return path.split('.')
 
 def qname2path(qname):
     '''
     qname(['a', 'b', 'c']) to path('a.b.c')
     '''
-    path = ''
-    for v in qname:
-        if type(v) == frozendict:
-            path = path + str(v)
-        elif type(v) == int:
-            path = path + '.' + str(v)
-        else:
-            path = path + '.' + v
-    return path.lstrip('.')
+    return '.'.join(qname)
 
 def url2path(url):
     '''
@@ -64,14 +32,10 @@ def instance2url(instance):
     qname = instance.qname_()
     url = ''
     for v in qname:
-        if isinstance(v, frozendict):
-            url += repr(v)
-        else:
-            url += '/' + v
+        url += '/' + v
     url += '/'
     return url
 
-from tega.tree import Cont
 def _dict2cont(cont, instance):
     if isinstance(instance, dict):
         for k,v in instance.items():
@@ -138,6 +102,28 @@ def subtree(path, value):
             raise ValueError('len(qname) <= 1 and its value is not dict')
 
     return cont
+
+def _deserialize(root, dict_):
+    for k, v in dict_.items():
+        if k.startswith('_'):
+            root._setattr(k, v)
+        else:
+            value = dict_[k]
+            if '_value' in value: 
+                root[k] = value['_value']
+                root[k]._setattr('_version', value['_version'])
+            else:
+                root[k] = _deserialize(Cont(k), value)
+    return root
+
+def deserialize(dict_):
+    '''
+    Deserializes dict(w/ internal=True option) into Cont
+    '''
+    root_oid = dict_['_oid']
+    root = Cont(root_oid)
+    _deserialize(root, dict_)
+    return root
 
 _quoted_arg_matcher = re.compile('\s*([\'\"]+[\w\s\.\/-]*[\'\"]+)\s*')
 

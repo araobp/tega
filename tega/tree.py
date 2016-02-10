@@ -1,5 +1,3 @@
-from tega.frozendict import frozendict
-
 from collections import MutableMapping
 import copy
 import io
@@ -164,19 +162,8 @@ class Cont(MutableMapping):
         '''
         if isinstance(self, RPC):
             return self._get_func()(*args, **kwargs)
-        if bool(kwargs):
-            if '_presence' in self._iter():
-                self._immutability_check()
-                self._delattr('_presence') # TODO: or raises an exception?
-            key = frozendict(kwargs)
-            if key in self.__dict__:
-                return self.__dict__[key]
-            else:
-                return self.__getattr__(key)
         else:
-            self._immutability_check()
-            self._setattr('_presence', None) 
-            return self
+            return self.__getattr__(key)
 
     def _freeze(self):
         '''
@@ -355,11 +342,7 @@ class Cont(MutableMapping):
         to._setattr(self._getattr('_oid'), self) # The parent makes a link (an attribute) to the object
     
     def __str__(self):
-        if '_presence' in self._iter():
-            return str(self._getattr('_oid'))
-        else:
-            return self.walk_()
-        # TODO: what if a user issued print mistakinglly? 
+        return self.walk_()
 
     def ephemeral_(self):
         '''
@@ -374,22 +357,17 @@ class Cont(MutableMapping):
         #return not key in ('_frozen', '_ephemeral')
         return not key in ('_frozen',)
 
-    def serialize_(self, internal=False, out=None, str_key=False, serialize_ephemeral=True):
+    def serialize_(self, internal=False, out=None, serialize_ephemeral=True):
         '''
         Serializes a Cont object into Python dict.
-
-        TODO: "str_key" is to convert an integer key into string.
-        JSON does not allow an integer as a key.
         '''
         if out is None:
             out = {}
         for k,v in self.__dict__.items():
             type_v = type(v)
-            sk = str(k)
-            is_child_or_value = not sk.startswith('_')
+            is_child_or_value = not k.startswith('_')
             if not serialize_ephemeral and is_child_or_value and v.is_ephemeral_():
                 continue
-            if str_key: k = sk
             if is_child_or_value:
                 if type_v == Cont:
                     out[k] = {}
@@ -405,7 +383,7 @@ class Cont(MutableMapping):
                     out[k] = v
 
             if k != '_parent' and isinstance(v, Cont):
-                v.serialize_(internal=internal, out=out[k], str_key=str_key,
+                v.serialize_(internal=internal, out=out[k],
                         serialize_ephemeral=serialize_ephemeral)
 
             if is_child_or_value and not serialize_ephemeral and not out[k]:
@@ -423,7 +401,7 @@ class Cont(MutableMapping):
         '''
         Dumps data in JSON format.
         '''
-        out = self.serialize_(internal=internal, str_key=True)
+        out = self.serialize_(internal=internal)
         return json.dumps(out)
 
     def __repr__(self):
@@ -532,10 +510,8 @@ class Cont(MutableMapping):
         c._ephemeral = ephemeral
         return c
 
-    def _serialize_(self, internal=False, str_key=False, serialize_ephemeral=True):
-        '''
-        Note: yaml and str_key are just for API compatibility thus ignored.
-        '''
+    def _serialize_(self, internal=False, serialize_ephemeral=True):
+        
         if not serialize_ephemeral and self.is_ephemeral_():
             return None
         
@@ -616,8 +592,9 @@ class Bool(Cont):
         else:
             return False
 
-    def serialize_(self, internal=False, out=None, str_key=False,
+    def serialize_(self, internal=False, out=None,
             serialize_ephemeral=True):
+
         if not serialize_ephemeral and self.is_ephemeral_():
             return None
         if out is None:
@@ -669,8 +646,9 @@ class RPC(Cont):
         else:
             return False
 
-    def serialize_(self, internal=False, out=None, str_key=False,
+    def serialize_(self, internal=False, out=None,
             serialize_ephemeral=True):
+
         if not serialize_ephemeral and self.is_ephemeral_():
             return None
         if out is None:

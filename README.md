@@ -112,6 +112,7 @@ Documentation
 - [tree structure](./doc/tree.png)
 - [operations to the tree](https://docs.google.com/drawings/d/1KOUuiQcosYpfEi4HyF7BYsiiSEW_2rJsZKy9xIPuIZQ/pub?w=960&h=720)
 - [tree structure implemention: Cont class and its attributes](./doc/attributes.md)
+- [YANG-tega comparisons](./doc/yang-tega-comparisons.md)
 - [tega message format](./doc/message-format.md)
 - [tega db format](./doc/tega-db-format.md)
 - [sync path and notifications](./doc/sync_path_and_notifications.md)

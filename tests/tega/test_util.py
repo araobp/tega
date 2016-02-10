@@ -1,6 +1,5 @@
 import unittest
 
-import tega.frozendict
 import tega.util
 
 class TestSequence(unittest.TestCase):
@@ -18,19 +17,10 @@ class TestSequence(unittest.TestCase):
         qname = tega.util.path2qname('a.b.c')
         self.assertEqual(['a', 'b', 'c'], qname)
         
-        qname = tega.util.path2qname('a.b(x=1, y=Berlin).c')
-        self.assertEqual(['a', 'b',
-            tega.frozendict.frozendict(x=1,y='Berlin'), 'c'], qname)
-
     def test_qname2path(self):
 
         path = tega.util.qname2path(['a', 'b', 'c'])
         self.assertEqual('a.b.c', path) 
-
-        path = tega.util.qname2path(['a', 'b',
-            tega.frozendict.frozendict(x=1, y='Berlin'), 'c'])
-        self.assertTrue('a.b(x=1,y=Berlin).c' == path or
-                'a.b(y=Berlin,x=1).c' == path)
 
     def test_url2path(self):
 
@@ -54,19 +44,6 @@ class TestSequence(unittest.TestCase):
             
         url = tega.util.instance2url(a.b.c)
         self.assertEqual('/a/b/c/', url) 
-
-        a = tega.tree.Cont('a')
-        a.b(x=1).c
-
-        url = tega.util.instance2url(a.b(x=1).c)
-        self.assertEqual('/a/b(x=1)/c/', url)
-
-        a = tega.tree.Cont('a')
-        a.b(x=1,y='Berlin').c
-
-        url = tega.util.instance2url(a.b(x=1,y='Berlin').c)
-        self.assertTrue('/a/b(x=1,y=Berlin)/c/' == url or
-                '/a/b(y=Berlin,x=1)/c/' == url)
 
     def test_dict2cont(self):
 
