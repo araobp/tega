@@ -1,14 +1,13 @@
 ##YANG-tega comparison
 
-|YANG      |tega                                                          |
-|----------|--------------------------------------------------------------|
-|leaf      |int, str, list(tuple), Bool and Func                          |
-|leaf-list |[ ]                                                           |
-|container |Cont (note: Python dict is always converted into Cont)        |
-|list      |(Unsupported intentionally, for keeping compatiblity with JSON|
-|presence  |Cont with no value                                            |
-|leafref   |qname (under study)                                           |
-
+|YANG      |tega                                                           |
+|----------|---------------------------------------------------------------|
+|leaf      |int, str, list(tuple), Bool and Func                           |
+|leaf-list |[ ]                                                            |
+|container |Cont (note: Python dict is always converted into Cont)         |
+|list      |(Unsupported intentionally, for keeping compatiblity with JSON)|
+|presence  |Cont with no value                                             |
+|leafref   |qname (under study)                                            |
 
 ##How tega's data structure (tega.tree) works internally
 
