@@ -685,10 +685,12 @@ def main():
             action='store_true')
     parser.add_argument("-t", "--tegaid", help="tega ID", type=str,
             default=str(uuid.uuid4()))
-    parser.add_argument("-e", "--extensions", help="Directory of tega plugins",             type=str, default=None)
+    parser.add_argument("-e", "--extensions", help="Directory of tega plugins",
+            type=str, default=None)
+    parser.add_argument("-l", "--maxlen", help="The number of old roots kept in idb",
+            type=int, default=tega.idb.OLD_ROOTS_LEN)
 
     args = parser.parse_args()
-    print(args)
 
     if args.syncpath:
         role = 'client'
@@ -706,7 +708,8 @@ def main():
             mport = args.mport
 
     # idb initialization
-    tega.idb.start(args.datadir, args.tegaid)  # idb start
+    print(args)
+    tega.idb.start(args.datadir, args.tegaid, args.maxlen)  # idb start
 
     # Reloads previous logs from tega db file
     logging.info('Reloading log from {}...'.format(args.datadir))

@@ -4,6 +4,7 @@ from tega.tree import Cont, RPC
 from tega.util import path2qname, qname2path, dict2cont, subtree, deserialize, newest_commit_log
 
 import copy
+import collections
 from enum import Enum
 import hashlib
 import logging
@@ -20,6 +21,7 @@ COMMIT_START_MARKER = '?'
 COMMIT_FINISH_MARKER = '@'
 ROLLBACK_MARKER = '-'
 SYNC_CONFIRMED_MARKER = '*'
+OLD_ROOTS_LEN = 10
 
 _idb = {}  # in-memory DB
 _old_roots = {}  # old roots at every version
@@ -34,6 +36,7 @@ channels = {}  # channels subscribed by subscribers
 global_channels = {}  # channels belonging to global or sync scope
 subscribers = {}  # subscribers subscribing channels
 subscribe_forwarders = set()
+old_roots_len = OLD_ROOTS_LEN  # The max number of old roots kept in idb 
 
 class OPE(Enum):
     '''
@@ -64,7 +67,7 @@ class NonLocalRPC(Exception):
     def __str__(self):
         return self.reason
 
-def start(data_dir, tega_id):
+def start(data_dir, tega_id, maxlen=OLD_ROOTS_LEN):
     '''
     Starts tega db
     '''
@@ -77,6 +80,7 @@ def start(data_dir, tega_id):
     log_file_name = 'log.{}.{}'.format(server_tega_id, seq_no)
     log_file = os.path.join(_log_dir, log_file_name)
     _log_fd = open(log_file, 'a+')  # append-only file
+    old_roots_len = maxlen
 
 def is_started():
     '''
@@ -272,6 +276,9 @@ def log_entry(ope, path, tega_id, instance):
     '''
     return dict(ope=ope, path=path, tega_id=tega_id, instance=instance)
 
+def old_roots_deque():
+    return collections.deque(maxlen=old_roots_len)
+
 class tx:
     '''
     tega-db transaction 
@@ -431,7 +438,7 @@ class tx:
                 del _idb[root_oid]
             if old_root:
                 if not root_oid in _old_roots:
-                    _old_roots[root_oid] = []
+                    _old_roots[root_oid] = old_roots_deque() 
                 _old_roots[root_oid].append((prev_version, old_root))
 
         # Notifies the commited transaction to subscribers
@@ -733,8 +740,8 @@ def old():
     '''
     old_roots = []
     for k,v in _old_roots.items():
-        versions = [version[0] for version in v]
-        old_roots.append({k: versions})
+        version = [elm[0] for elm in v]
+        old_roots.append({k: version})
     return old_roots
 
 def rollback(root_oid, backto, write_log=True):
@@ -790,7 +797,8 @@ def create_index(path):
                 else:
                     prev_version = version
                 if path not in _old_roots:
-                    _old_roots[path] = [(version, root)]
+                    _old_roots[path] = old_roots_deque()
+                    _old_roots[path].append((version, root))
                 else:
                     _old_roots[path].append((version, root))
                 break
