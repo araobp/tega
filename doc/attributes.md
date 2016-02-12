@@ -24,7 +24,7 @@
 |_parent   |Reference to the parent object    |GC may collect the parent                    |
 |_oid      |Hash-able Key to the self object  |Such as str, int, long, tuple or frozendict  |
 |_version  |Node version used for MVCC        |\__setattr\__ is disabled when _version > 0  |
-|_presence |Corresponds to YANG presence      |                                             |
+|_ephemeral|Ephemeral node                    |True if it is ephemeral                      |
 |_frozen   |Immutability                      |True as long as the attribute is immutable   |
 
 ###Bool(Cont) class
