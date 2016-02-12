@@ -135,7 +135,8 @@ def copy_and_childref(cont):
     childref = []
     for k,v in cont.__dict__.items():
         obj._setattr(k ,v)
-        obj.freeze_()
+        if isinstance(obj, Cont):
+            obj.freeze_()
         if not k.startswith('_'):
             childref.append(v)
     return (obj, childref)
