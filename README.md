@@ -111,6 +111,7 @@ Documentation
 - [CLI command usage](./doc/usage.md)
 - [tree structure](./doc/tree.png)
 - [operations to the tree](https://docs.google.com/drawings/d/1KOUuiQcosYpfEi4HyF7BYsiiSEW_2rJsZKy9xIPuIZQ/pub?w=960&h=720)
+- [garbage collection](https://docs.google.com/drawings/d/1DhOdnzqqG1wjs2-duG7f9jCQAyki-7qsrEG9pfBVKcI/pub?w=960&h=720)
 - [tree structure implemention: Cont class and its attributes](./doc/attributes.md)
 - [YANG-tega comparisons](./doc/yang-tega-comparisons.md)
 - [tega message format](./doc/message-format.md)
