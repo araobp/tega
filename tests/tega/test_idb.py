@@ -217,32 +217,6 @@ class TestSequence(unittest.TestCase):
         self.assertEqual(3, tega.idb.get_version('inventory.ne2'))
         self.assertEqual(3, tega.idb.get_version('inventory'))
 
-    def test_create_index(self):
-        r = tega.tree.Cont('r')
-        with tega.idb.tx() as t:
-            r.a.b = 0
-            t.put(r.a.b)
-        with tega.idb.tx() as t:
-            r.a.b = 1
-            t.put(r.a.b)
-        with tega.idb.tx() as t:
-            r.x.y = 2
-            t.put(r.x.y)
-        with tega.idb.tx() as t:
-            r.x.y = 3
-            t.put(r.x.y)
-
-        old = tega.idb._old_roots['r']
-        version, root = old[0]
-        self.assertEqual(0, version)
-        tega.idb.create_index('r.a')
-        old = tega.idb._old_roots['r.a']
-        version, root = old[0]
-        self.assertEqual(0, version)
-        version, root = old[1]
-        self.assertEqual(1, version)
-        self.assertEqual(2, len(old))
-
     def test_ephemeral_nodes(self):
         OWNER = 'owner1'
         r = tega.tree.Cont('r')
