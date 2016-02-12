@@ -91,9 +91,6 @@ class ManagementRestApiHandler(tornado.web.RequestHandler):
             root_oid = self.get_argument('root_oid', None)
             backto = self.get_argument('backto', None)
             tega.idb.rollback(root_oid, int(backto))
-        elif cmd == 'index':
-            path = self.get_argument('path', None)
-            tega.idb.create_index(path)
         elif cmd == 'begin':
             tega_id = self.get_argument('tega_id')
             t = tx(subscriber=_tega_id2subscriber(tega_id))

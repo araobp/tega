@@ -162,14 +162,6 @@ class Driver(object):
         response, body = self.conn.request(url, POST, None, HEADERS)
         return (response.status, response.reason, None)
     
-    def index(self, path):
-        '''
-        index command
-        '''
-        url = self._cmdencode('index', path=path)
-        response, body = self.conn.request(url, POST, None, HEADERS)
-        return (response.status, response.reason, None)
-
     def _response_check(self, response):
         if response.status >= 300 or response.status < 200:
             raise CRUDException('{} {}'.format(

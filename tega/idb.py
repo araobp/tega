@@ -1,7 +1,7 @@
 from tega.subscriber import SCOPE
 from tega.messaging import request, REQUEST_TYPE
 from tega.tree import Cont, RPC
-from tega.util import path2qname, qname2path, dict2cont, subtree, deserialize, newest_commit_log
+from tega.util import path2qname, qname2path, dict2cont, subtree, deserialize, copy_and_childref, align_vector, newest_commit_log
 
 import copy
 import collections
@@ -348,6 +348,7 @@ class tx:
         new_root = None
         tail = None
         root = None
+        redirection = None 
         go = False
         no_copy = False
         prev_version = -1
@@ -355,7 +356,7 @@ class tx:
         root_oid = qname[0]
 
         if root_oid in self.candidate:  # copy already exists
-            prev_version, new_version, root = self.candidate[root_oid]
+            prev_version, new_version, root, redirection = self.candidate[root_oid]
             new_root = root
             go = True
             no_copy = True  # operations performed on the copy
@@ -365,7 +366,8 @@ class tx:
             root = target[root_oid]
             prev_version = root._getattr(VERSION)
             new_version = prev_version + 1
-            new_root = root.copy_(freeze=True)
+            new_root, childref = copy_and_childref(root)
+            redirection = [(root, childref)]
             go = True
 
         target = root
@@ -384,7 +386,8 @@ class tx:
                     if no_copy:
                         tail = target
                     else:
-                        tail = target.copy_(freeze=True)
+                        tail, childref = copy_and_childref(target)
+                        redirection.append((target, childref))
                     tail._setattr('_parent', parent)
                     parent._setattr(VERSION, new_version)
                     parent._setattr(iid, tail)
@@ -395,7 +398,7 @@ class tx:
 
             tail._setattr(VERSION, new_version)
             
-        return (prev_version, new_version, new_root, tail)
+        return (prev_version, new_version, new_root, tail, redirection)
 
     def commit(self, write_log=True):
         '''
@@ -428,7 +431,16 @@ class tx:
 
         # old roots cache update
         for root_oid in self.candidate:
-            prev_version, new_version, new_root = self.candidate[root_oid]
+            prev_version, new_version, new_root, redirection = self.candidate[root_oid]
+
+            # Attaches the existing children (excluding newborns)
+            if redirection:
+                for r in redirection:
+                    parent = r[0]
+                    children = r[1]
+                    for c in children:
+                        c._setattr('_parent', parent)
+
             old_root = None
             if root_oid in _idb:
                 old_root = _idb[root_oid]
@@ -527,7 +539,7 @@ class tx:
             if isinstance(instance, Cont):
                 instance.freeze_()
             root_oid = qname[0]
-            prev_version, new_version, new_root, above_tail = self._copy_on_write(qname, above_tail=True)
+            prev_version, new_version, new_root, above_tail, redirection = self._copy_on_write(qname, above_tail=True)
             self._instance_version_set(instance, new_version)
 
             if above_tail:
@@ -535,7 +547,8 @@ class tx:
             else:
                 new_root = instance
             if not root_oid in self.candidate:
-                self.candidate[root_oid] = (prev_version, new_version, new_root)
+                self.candidate[root_oid] = (prev_version, new_version, new_root,
+                        redirection)
 
             # Commit queue
             self._enqueue_commit(OPE.PUT, path, tega_id, instance, ephemeral)
@@ -578,7 +591,7 @@ class tx:
             #      delete operation
             #
             root_oid = qname[0]
-            prev_version, new_version, new_root, above_tail = self._copy_on_write(qname, above_tail=True)
+            prev_version, new_version, new_root, above_tail, redirection = self._copy_on_write(qname, above_tail=True)
             if above_tail:
                 oid = qname[-1]
                 instance = above_tail[oid]
@@ -588,8 +601,10 @@ class tx:
                     above_tail.delete_()
             else:
                 instance = _idb[path]
+
             if not root_oid in self.candidate:
-                self.candidate[root_oid] = (prev_version, new_version, new_root)
+                self.candidate[root_oid] = (prev_version, new_version, new_root,
+                        redirection)
 
             # Commit queue
             ephemeral = instance.is_ephemeral_()
@@ -616,7 +631,6 @@ class tx:
         # Searches "path" in "channels".
         # Search order: a.b.c, a.b, a (reversed)
         for i in reversed(range(len(qname))):
-            #_path = '.'.join(qname[:i+1])
             _path = qname2path(qname[:i+1])
             if _path in channels:
                 for subscriber in channels[_path]:
@@ -761,6 +775,7 @@ def rollback(root_oid, backto, write_log=True):
         pair = roots.pop()
     version = pair[0]
     root = pair[1]
+    align_vector(root)
     _idb[root_oid] = root
     marker_rollback = '{} {}'.format(str(backto), root_oid)
     if _log_fd and write_log:
@@ -768,40 +783,6 @@ def rollback(root_oid, backto, write_log=True):
         _log_fd.flush()
         os.fsync(_log_fd)
     _log_cache.append(marker_rollback)
-
-def create_index(path):
-    '''
-    Creates an index
-    '''
-    global _old_roots
-    prev_version = -1
-    qname = path2qname(path)
-    if len(qname) <= 1 or path in _old_roots:
-        raise ValueError
-
-    root_oid = qname[0]
-    for version, root in _old_roots[root_oid]:
-        _iter = iter(qname[1:])
-        while True:
-            try:
-                oid = next(_iter)
-                if oid in root:
-                    root = root[oid]
-                else:
-                    break
-            except StopIteration:
-                version = root._version
-                if version == prev_version:
-                    prev_version = version
-                    break
-                else:
-                    prev_version = version
-                if path not in _old_roots:
-                    _old_roots[path] = old_roots_deque()
-                    _old_roots[path].append((version, root))
-                else:
-                    _old_roots[path].append((version, root))
-                break
 
 def _timestamp_policy(line):
     '''

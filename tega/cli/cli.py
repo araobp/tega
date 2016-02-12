@@ -25,7 +25,7 @@ readline.set_history_length(HISTORY_LENGTH)
 operations = '|'.join(['get', 'geta', 'put', 'pute', 'delete', 
     'begin', 'cancel', 'commit', 'subscribe', 'unsubscribe', 'publish'])
 cmd_pattern = re.compile('^(' + operations +
-        ')\s+([\(\)\[\]=,\.\w\*]+)\s*(-*\d*)$|^(rollback)\s+([\w]+)\s+(-\d*)$|^(index)\s+([.\w]+)$')
+        ')\s+([\(\)\[\]=,\.\w\*]+)\s*(-*\d*)$|^(rollback)\s+([\w]+)\s+(-\d*)$')
 rpc_pattern = re.compile('^[\.\w]+\([\w\s\'\"\,\.\/=-]*\)$')
 methods = {'get': OPE.GET.name, 'geta': OPE.GET.name,
     'put': OPE.PUT.name, 'delete': OPE.DELETE.name}
@@ -38,7 +38,6 @@ q                       quit
 id                      show tega ID of this CLI
 clear                   empty the database
 roots                   list root object IDs
-index       M           create an index for an object ID
 old                     list old root object IDs
 sync                    synchronize with global idb 
 log                     show the log cache
@@ -186,8 +185,6 @@ def process_cmd(tornado_loop=False):
             rollback = g.group(4)
             root_oid = g.group(5)
             backto = g.group(6)
-            index = g.group(7)
-            index_path = g.group(8)
             if ope == 'subscribe':
                 # SUBSCRIBE from CLI is propagated to global idb. 
                 #driver.subscribe(path, SCOPE.SYNC)
@@ -200,9 +197,6 @@ def process_cmd(tornado_loop=False):
             else:
                 if rollback:
                     status, reason, data = getattr(driver, 'rollback')(root_oid, backto) 
-                    print('{} {}'.format(status, reason))
-                elif index:
-                    status, reason, data = getattr(driver, 'index')(index_path) 
                     print('{} {}'.format(status, reason))
                 else:
                     body = None

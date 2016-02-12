@@ -127,6 +127,29 @@ def deserialize(dict_):
 
 _quoted_arg_matcher = re.compile('\s*([\'\"]+[\w\s\.\/-]*[\'\"]+)\s*')
 
+def copy_and_childref(cont):
+    '''
+    Returns its "narrow" copy and references to its children
+    '''
+    obj = cont.__class__()  # Cont
+    childref = []
+    for k,v in cont.__dict__.items():
+        obj._setattr(k ,v)
+        obj.freeze_()
+        if not k.startswith('_'):
+            childref.append(v)
+    return (obj, childref)
+
+def align_vector(cont):
+    '''
+    Aligns references between parents and children
+    '''
+    for k,v in cont.items():
+        child = cont[k]
+        child._setattr('_parent', cont)
+        if isinstance(child, Cont):
+            align_vector(child)
+
 def eval_arg(arg):
     '''
     RPC argument evaluation
