@@ -122,6 +122,9 @@ Documentation
 ###CRUD operations
 ![operations to the tree](https://docs.google.com/drawings/d/1KOUuiQcosYpfEi4HyF7BYsiiSEW_2rJsZKy9xIPuIZQ/pub?w=600&h=480)
 
+###Rollback
+![rollback](https://docs.google.com/drawings/d/1nO-BKRYPdFKBjtkdOYpFiRd1WBQPMLHp3ojlqEroJVg/pub?w=600&h=480)
+
 ###Consistency
 ![CP](https://docs.google.com/drawings/d/11fC2DojI9gzw-FV3NG8Ubh97sKm0RmWk-tNJBu1Tt-M/pub?w=600&h=480)
 
