@@ -132,7 +132,8 @@ class ManagementRestApiHandler(tornado.web.RequestHandler):
                 else:
                     raise tornado.web.HTTPError(404)
         elif cmd == 'sync':
-            _sync_request(mhost, mport, sync_path)
+            # TODO
+            pass
         elif cmd == 'ss':
             tega_id = self.get_argument('tega_id', None)
             tega.idb.save_snapshot(tega_id)
@@ -180,32 +181,8 @@ class SyncApiHandler(tornado.web.RequestHandler):
     REST API for tega-db sync operations
     '''
     def post(self, cmd):
-        if cmd == 'sync_check':
-            sync_path = self.get_argument('sync_path')
-            digest = self.get_argument('digest')
-            if sync_path and digest:
-                synchronized = tega.idb.sync_check(sync_path, digest)
-                if not synchronized:
-                    raise tornado.web.HTTPError(409)
-        elif cmd == 'sync_db':
-            sync_path = self.get_argument('sync_path')
-            transactions = tornado.escape.json_decode(self.request.body)
-            tega_id = self.get_argument('tega_id')
-            subscriber = _tega_id2subscriber(tega_id)
-            if sync_path and transactions is not None:
-                confirmed = tega.idb.get_sync_confirmed(sync_path)
-                _transactions = tega.idb.conflict_resolution(subscriber,
-                                                             sync_path,
-                                                             transactions)
-                version = _get_sync_path_version(sync_path)
-                sync_ver = 0
-                if confirmed:
-                    sync_ver = confirmed['sync_ver'] + 1
-                tega.idb.sync_confirmed_server(tega_id, sync_path, version, sync_ver)
-                self.write(json.dumps(_transactions))
-                self.set_header('Content-Type', 'application/json')
-            else:
-                raise tornado.web.HTTPError(400)
+        # TODO
+        pass
 
 class RestApiHandler(tornado.web.RequestHandler):
     '''
@@ -462,68 +439,6 @@ def transaction_gc():
             else:
                 transactions[txid]['expire'] = expire - 1
 
-def _get_sync_path_version(sync_path):
-    '''
-    Gets version of the sync_path.
-
-    Returns -1 if the sync_path is not found in idb.
-    '''
-    version = -1
-    try:
-        version = tega.idb.get_version(sync_path) 
-    except KeyError:
-        logging.info('sync path "{}" not found in local tega db'.format(
-            sync_path))
-    return version
-
-def _sync_request(mhost, mport, sync_path):
-    '''
-    Synchronization request from local idb to global idb.
-
-    TODO: initiating sync request from Master to Slave as well.
-    '''
-
-    conn = httplib2.Http()
-
-    commiters = tega.idb.commiters(sync_path)
-    digest = tega.idb.commiters_hash(commiters)
-    url = 'http://{}:{}/_sync_check?sync_path={}&digest={}'.format(
-            mhost, mport, sync_path, digest)
-
-    try:
-        response, body = conn.request(url, 'POST', None, HEADERS)
-    except ConnectionRefusedError:
-        raise
-
-    logging.debug('response status: {}'.format(response.status))
-    if response.status == 200:  # Already synchronized
-        return
-
-    elif response.status == 409:  # Conflict
-        tega_id = server_as_subscriber.tega_id
-        url = 'http://{}:{}/_sync_db?sync_path={}&tega_id={}'.format(
-                mhost, mport, sync_path, tega_id)
-        url_confirmed = 'http://{}:{}'.format(mhost, mport)
-        confirmed, transactions = tega.idb.transactions_since_last_sync(sync_path)
-        logging.debug('transactions since last sync: {}'.format(transactions))
-        response, body = conn.request(url, 'POST',
-                json.dumps(transactions), HEADERS)
-        if response.status == 200:
-            _transactions = json.loads(body.decode('utf-8'))
-            logging.debug('sync response received - \n{}'.
-                    format(yaml.dump(_transactions)))
-            tega.idb.conflict_resolution(server_as_subscriber,
-                    sync_path, _transactions)
-            version = _get_sync_path_version(sync_path)
-            sync_ver = 0
-            if confirmed:
-                sync_ver = confirmed['sync_ver'] + 1
-            tega.idb.sync_confirmed(url_confirmed, sync_path, version, sync_ver)
-    else:
-        # TODO: error condition
-        logging.debug('{} {}'.format(response.status, response.reason))
-        pass
-
 class _SubscriberClient(object):
     '''
     Subscriber client for server.py itself, for db dync.
@@ -535,10 +450,10 @@ class _SubscriberClient(object):
 
     '''
 
-    def __init__(self, mhost, mport, sync_path, tega_id):
+    def __init__(self, mhost, mport, sync, tega_id):
         self.mhost = mhost
         self.mport = mport
-        self.sync_path = sync_path
+        self.sync = sync
         self.tega_id = tega_id
         self.client = None
         self.on_notify = None
@@ -582,8 +497,9 @@ class _SubscriberClient(object):
                 self.client.write_message('SESSION {} {}'.format(
                                     self.tega_id, SCOPE.GLOBAL.value))
 
-                # Sends SUBSCRIBE sync_path sync to global idb.
-                self.send_subscribe(self.sync_path, SCOPE.SYNC)
+                # Sends SUBSCRIBE sync sync to global idb.
+                for root_oid in self.sync:
+                    self.send_subscribe(root_oid, SCOPE.SYNC)
 
                 # (re-)sends SUBSCRIBE <global channel> <scope>
                 # to global idb.
@@ -675,11 +591,8 @@ def main():
             default=None)
     parser.add_argument("-P", "--mport", help="Global idb REST API server port",
                         type=int, default=None)
-    parser.add_argument("-S", "--syncpath",
-            help="Root path to be synchronized with", type=str, default=None)
-    parser.add_argument("-s", "--sync",
-            help="Synchronize with global idb at start up",
-            action='store_true')
+    parser.add_argument("-S", "--sync",
+            help="Root oids to be synchronized with", type=str, nargs='*', default=None)
     parser.add_argument("-t", "--tegaid", help="tega ID", type=str,
             default=str(uuid.uuid4()))
     parser.add_argument("-e", "--extensions", help="Directory of tega plugins",
@@ -689,16 +602,12 @@ def main():
 
     args = parser.parse_args()
 
-    if args.syncpath:
-        role = 'client'
-    else:
-        role = 'server'
-    print('{}\ntega_id: {}, sync: {}\n'.format(LOGO, args.tegaid, role))
+    print('{}\n\ntega_id: {}, sync: {}\n'.format(LOGO, args.tegaid,
+        args.sync))
 
-    if args.syncpath:
-        sync_path = args.syncpath
+    if args.sync:
         if not args.mhost or not args.mport:
-            print('All --mhost, --mport and --syncpath options MUST be specified')
+            print('All --mhost, --mport and --sync options MUST be specified')
             sys.exit(1)
         else:
             mhost = args.mhost
@@ -736,19 +645,20 @@ def main():
         tornado.ioloop.PeriodicCallback(transaction_gc,
                 TRANSACTION_GC_PERIOD * 1000).start()
         
-        if args.mhost and args.mport and args.syncpath:
+        if args.mhost and args.mport and args.sync:
             tega_id = args.tegaid
             server_as_subscriber = _SubscriberClient(
-                    args.mhost, args.mport, args.syncpath, tega_id)
+                    args.mhost, args.mport, args.sync, tega_id)
             if args.sync:
                 while (True):
                     try:
-                        _sync_request(args.mhost, args.mport, args.syncpath)
+                        # TODO
+                        pass
                         break
                     except ConnectionRefusedError:
                         print('global idb does not seem to be running...')
                         time.sleep(CONNECT_RETRY_TIMER)
-                print('sync confirmed')
+                print('synchronized with peer')
 
             tornado.ioloop.IOLoop.current().run_sync(
                     server_as_subscriber.subscriber_loop)
