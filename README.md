@@ -108,22 +108,19 @@ as of 2015/6/14
 
 Documentation
 -------------
+
+###Specification
 - [CLI command usage](./doc/usage.md)
 - [tree structure](./doc/tree.png)
-- [operations to the tree](https://docs.google.com/drawings/d/1KOUuiQcosYpfEi4HyF7BYsiiSEW_2rJsZKy9xIPuIZQ/pub?w=960&h=720)
 - [tree structure implemention: Cont class and its attributes](./doc/attributes.md)
 - [YANG-tega comparisons](./doc/yang-tega-comparisons.md)
 - [tega message format](./doc/message-format.md)
 - [tega db format](./doc/tega-db-format.md)
 - [sync path and notifications](./doc/sync_path_and_notifications.md)
 - [subscription scope](./doc/subscription_scope.md)
-- [rpc routing](https://docs.google.com/drawings/d/1GHHYrF3s0MRypT_SxHkDAT-aFTfCtMh9NkqQrVEtvqo/pub?w=960&h=720)
 
-TODO(2016/02/5)
-----
-## Design change
-
-Since tega db is for network config, it is not a good idea to take AP.
+###CRUD operations
+![operations to the tree](https://docs.google.com/drawings/d/1KOUuiQcosYpfEi4HyF7BYsiiSEW_2rJsZKy9xIPuIZQ/pub?w=600&h=480)
 
 ###Consistency
 ![CP](https://docs.google.com/drawings/d/11fC2DojI9gzw-FV3NG8Ubh97sKm0RmWk-tNJBu1Tt-M/pub?w=600&h=480)
@@ -132,7 +129,10 @@ Since tega db is for network config, it is not a good idea to take AP.
 ![Collision](https://docs.google.com/drawings/d/1D45tSElc7S4bnPCV_VLwJXua2O08Jv2gMqL4xeLaf2s/pub?w=600&h=480)
 
 ###Garbage collection
-![garbage collection](https://docs.google.com/drawings/d/1DhOdnzqqG1wjs2-duG7f9jCQAyki-7qsrEG9pfBVKcI/pub?w=960&h=720)
+![garbage collection](https://docs.google.com/drawings/d/1DhOdnzqqG1wjs2-duG7f9jCQAyki-7qsrEG9pfBVKcI/pub?w=600&h=480)
+
+###RPC routing
+[rpc routing](https://docs.google.com/drawings/d/1GHHYrF3s0MRypT_SxHkDAT-aFTfCtMh9NkqQrVEtvqo/pub?w=960&h=720)
 
 References
 ----------
