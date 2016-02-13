@@ -132,7 +132,7 @@ Documentation
 ![garbage collection](https://docs.google.com/drawings/d/1DhOdnzqqG1wjs2-duG7f9jCQAyki-7qsrEG9pfBVKcI/pub?w=600&h=480)
 
 ###RPC routing
-[rpc routing](https://docs.google.com/drawings/d/1GHHYrF3s0MRypT_SxHkDAT-aFTfCtMh9NkqQrVEtvqo/pub?w=960&h=720)
+![rpc routing](https://docs.google.com/drawings/d/1GHHYrF3s0MRypT_SxHkDAT-aFTfCtMh9NkqQrVEtvqo/pub?w=960&h=720)
 
 References
 ----------
