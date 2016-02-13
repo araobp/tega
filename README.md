@@ -109,6 +109,8 @@ as of 2015/6/14
 Documentation
 -------------
 
+Note: Tega db is still in alpha release and part of the documentation here has not been implemented yet.
+
 ###Specification
 - [CLI command usage](./doc/usage.md)
 - [tree structure](./doc/tree.png)
