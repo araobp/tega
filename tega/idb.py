@@ -1,7 +1,7 @@
 from tega.subscriber import SCOPE
 from tega.messaging import request, REQUEST_TYPE
 from tega.tree import Cont, RPC
-from tega.util import path2qname, qname2path, dict2cont, subtree, deserialize, copy_and_childref, align_vector, newest_commit_log
+from tega.util import path2qname, qname2path, dict2cont, subtree, deserialize, copy_and_childref, align_vector, newest_commit_log, readline_reverse
 
 import copy
 import collections
@@ -68,8 +68,7 @@ def start(data_dir, tega_id, maxlen=OLD_ROOTS_LEN):
     global server_tega_id
     server_tega_id = tega_id
     _log_dir = os.path.join(os.path.expanduser(data_dir))
-    seq_no = newest_commit_log(server_tega_id, _log_dir)
-    log_file_name = 'log.{}.{}'.format(server_tega_id, seq_no)
+    log_file_name = newest_commit_log(server_tega_id, _log_dir)
     log_file = os.path.join(_log_dir, log_file_name)
     _log_fd = open(log_file, 'a+')  # append-only file
     old_roots_len = maxlen
@@ -840,6 +839,49 @@ def reload_log():
                 root = deserialize(instance)
                 _idb[root_oid] = root
 
+def loglist_for_sync(root_oid, version):
+    '''
+
+    '''
+    multi = []
+    g = readline_reverse(_log_fd)
+    version_ = _idb[root_oid]['_version']
+
+    while True:
+        try:
+            line = next(g).rstrip('\n')
+        except StopIteration:
+            break
+        if line.startswith(COMMIT_FINISH_MARKER) or line.startswith(COMMIT_START_MARKER) or line.startswith(SYNC_CONFIRMED_MARKER):
+            pass
+        elif line.startswith(ROLLBACK_MARKER):
+            args = line.split(' ')
+            root_oid_ = args[1]
+            if root_oid_ == root_oid:
+                backto = args[0]
+                tega_id = args[2]
+                log = log_entry(ope=OPE.ROLLBACK.name, path=root_oid,
+                        tega_id=tega_id, instance=None, backto=backto)
+                multi.insert(0, log)
+                version_ += 1
+                if version_ <= version:
+                    break
+        else:
+            log = eval(log)
+            ope = log['ope']
+            path = log['path']
+            tega_id = log['tega_id']
+            instance = log['instance']
+            if ope == OPE.SS.name:
+                pass
+            elif path.split('.')[0] == root_oid:
+                log = log_entry(ope=ope, path=path, tega_id=tega_id, instance=instance)
+                mutli.insert(0, log)
+                version_ -= 1
+                if version_ <= version:
+                    break
+    return multi
+
 def crud_batch(notifications, subscriber=None):
     '''
     CRUD operation in a batch.
@@ -890,13 +932,12 @@ def save_snapshot(tega_id):
     '''
     Take a snapshot of _idb and saves it to the hard disk.
     '''
-    seq_no = newest_commit_log(server_tega_id, _log_dir) + 1  # Increments the log seq number
+    log_file_name = newest_commit_log(server_tega_id, _log_dir, increment=True)  # Increments the log seq number
     _idb_snapshot = {}
     for root_oid in _idb:
         _idb_snapshot[root_oid] = _idb[root_oid].serialize_(internal=True,
                 serialize_ephemeral=False)
 
-    log_file_name = 'log.{}.{}'.format(server_tega_id, seq_no)
     log_file = os.path.join(_log_dir, log_file_name)
     _log_fd = open(log_file, 'a+')  # append-only file
 

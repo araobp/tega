@@ -193,7 +193,7 @@ def is_func(str_value):
     else:
         return False
 
-def newest_commit_log(server_tega_id, dir_):
+def newest_commit_log(server_tega_id, dir_, increment=False):
     '''
     Returns the newest commit log number
     '''
@@ -205,5 +205,32 @@ def newest_commit_log(server_tega_id, dir_):
             num = int(s[-1])
             if num > max_:
                 max_ = num
-    return max_
+    if increment:
+        max_ += 1
+    return 'log.{}.{}'.format(server_tega_id, str(max_))
 
+def readline_reverse(fd):
+    '''
+    readline() in reversed order
+
+    Usage example:
+    fd = open('test.txt')
+    g = readline_reverse(fd)
+    print(next(g))
+    print(next(g))
+          :
+    fd.close()
+    '''
+    fd.seek(0, os.SEEK_END)
+    p = fd.tell()
+    line = ''
+    while p >= 0:
+        fd.seek(p)
+        char = fd.read(1)
+        if char == "\n":
+            yield line[::-1]
+            line = ''
+        else:
+            line += char
+        p -= 1
+    yield line[::-1]
