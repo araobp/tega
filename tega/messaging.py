@@ -23,6 +23,7 @@ def build_parser(direction):
         tega WebSocket message format
 
         seq_no                  = 1*DIGIT
+        backto                  = 1*DIGIT
         tega_id                 = 1*( ALPHA / DIGIT / "-" / "_" )
         TEGA-websocket-message  = Session / SessionAck / Subscribe /
                                   Unsubscribe / Publish / Notify / Message /
@@ -35,6 +36,7 @@ def build_parser(direction):
         Notify                  = "NOTIFY" CRLF notifications
         Publish                 = "PUBLISH" SP channel CRLF message
         Message                 = "MESSAGE" SP channel SP tega_id CRLF message
+        Roolback                = "ROLLBACK" SP path SP backto
         Request                 = "REQUEST" SP seq_no SP TEGA-request-type SP
                                    tega_id SP path CRLF body 
         Response                = "RESPONSE" SP seq_no SP TEGA-request-type SP

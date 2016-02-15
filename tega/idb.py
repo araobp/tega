@@ -27,7 +27,6 @@ _idb = {}  # in-memory DB
 _old_roots = {}  # old roots at every version
 _log_dir = None  # Log directory
 _log_fd = None  # Log file descriptor
-_log_cache = []  # log cache
 _ephemeral_nodes = {}  # holder of ephemeral nodes
 
 server_tega_id = None  # Server's tega ID
@@ -47,6 +46,7 @@ class OPE(Enum):
     PUT = 3
     DELETE = 4 
     SS = 5
+    ROLLBACK = 6
 
 class NonLocalRPC(Exception):
     '''
@@ -96,12 +96,11 @@ def clear():
     '''
     Empties tega-db file and in-memory DB
     '''
-    global _idb, _old_roots, _log_cache
+    global _idb, _old_roots
     _log_fd.seek(0)
     _log_fd.truncate()
     _idb = {}
     _old_roots = {}
-    _log_cache = []
 
 def subscribe(subscriber, path, scope=SCOPE.LOCAL):
     '''
@@ -262,14 +261,28 @@ def is_subscribe_forwarder(tega_id):
             return True
     return False
 
-def log_entry(ope, path, tega_id, instance):
+def log_entry(ope, path, tega_id, instance, backto=None):
     '''
     Log entry
     '''
-    return dict(ope=ope, path=path, tega_id=tega_id, instance=instance)
+    if backto:
+        return dict(ope=ope, path=path, tega_id=tega_id, instance=instance,
+                backto=backto)
+    else:
+        return dict(ope=ope, path=path, tega_id=tega_id, instance=instance)
 
 def old_roots_deque():
     return collections.deque(maxlen=old_roots_len)
+
+def _notify_broadcast(notify_batch, subscriber=None):
+    '''
+    Notifies CRUD operations in a batch to subscribers
+
+    notify_batch: [subscriber, [log_entory, ...]]
+    '''
+    for _subscriber, notifications in notify_batch.items():
+        if subscriber != _subscriber:
+            _subscriber.on_notify(notifications)
 
 class tx:
     '''
@@ -404,7 +417,6 @@ class tx:
 
         if len(self.commit_queue) > 0:
             finish_marker = COMMIT_FINISH_MARKER+'{}'.format(time.time())
-            _log_cache.append(COMMIT_START_MARKER)
             if write_log:  # Writes log
                 if _log_fd:
                     _log_fd.write(COMMIT_START_MARKER+'\n')  # commit start
@@ -414,10 +426,6 @@ class tx:
                     _log_fd.write(finish_marker+'\n')  # commit finish marker
                     _log_fd.flush()
                     os.fsync(_log_fd)
-
-            # log cache update
-            _log_cache.extend(self.commit_queue)
-            _log_cache.append(finish_marker)
 
         # old roots cache update
         for root_oid in self.candidate:
@@ -444,7 +452,9 @@ class tx:
                 _old_roots[root_oid].append((prev_version, old_root))
 
         # Notifies the commited transaction to subscribers
-        self._notify_commit(self.subscriber)
+        _notify_broadcast(notify_batch=self.notify_batch,
+                subscriber=self.subscriber)
+        self.notify_batch = {}
 
     def _enqueue_commit(self, ope, path, tega_id, instance, ephemeral):
         '''
@@ -656,15 +666,6 @@ class tx:
 
                         self.notify_batch[subscriber].append(log)
 
-    def _notify_commit(self, subscriber=None):
-        '''
-        Notifies CRUD operations in a batch to subscribers
-        '''
-        for _subscriber, notifications in self.notify_batch.items():
-            if subscriber != _subscriber:
-                _subscriber.on_notify(notifications)
-
-        self.notify_batch = {}
 
 def get(path, version=None):
     '''
@@ -748,7 +749,7 @@ def old():
         old_roots.append({k: version})
     return old_roots
 
-def rollback(root_oid, backto, write_log=True):
+def rollback(tega_id, root_oid, backto, subscriber=None, write_log=True):
     '''
     Rollbacks a specific root to a previous version
     '''
@@ -767,12 +768,20 @@ def rollback(root_oid, backto, write_log=True):
     root = pair[1]
     align_vector(root)
     _idb[root_oid] = root
-    marker_rollback = '{} {}'.format(str(backto), root_oid)
+    marker_rollback = '{} {} {}'.format(str(backto), tega_id, root_oid)
     if _log_fd and write_log:
         _log_fd.write(marker_rollback+'\n')
         _log_fd.flush()
         os.fsync(_log_fd)
-    _log_cache.append(marker_rollback)
+
+    log = log_entry(ope=OPE.ROLLBACK.name, path=root_oid, tega_id=tega_id,
+            instance=None, backto=backto)
+    notify_batch = {}
+    for path_, subscriber in channels.items():
+        if path_.split('.')[0] == root_oid:
+            for s in subscribers:
+                notify_batch[s] = [log]
+    _notify_broadcast(notify_batch=notify_batch, subscriber=subscriber)
 
 def _timestamp(line):
     '''
@@ -792,7 +801,7 @@ def reload_log():
         line = line.rstrip('\n')
         if line.startswith(ROLLBACK_MARKER):
             args = line.split(' ')
-            rollback(args[1], int(args[0]), write_log=False)
+            rollback(args[1], args[2], int(args[0]), write_log=False)
         elif line.startswith(COMMIT_FINISH_MARKER) and len(multi) > 0:
             timestamp = _timestamp(line)
             t = tx()
@@ -810,9 +819,8 @@ def reload_log():
             del multi[:]
         elif line.startswith(COMMIT_FINISH_MARKER):
             pass
-        # TODO: the block below is to be removed.
         elif line.startswith(COMMIT_START_MARKER) or line.startswith(SYNC_CONFIRMED_MARKER):
-            _log_cache.append(line)
+            pass
         else:
             log = eval(line)
             ope = log['ope']
@@ -840,12 +848,15 @@ def crud_batch(notifications, subscriber=None):
         for crud in notifications:
             ope = crud['ope']
             path = crud['path']
-            instance = subtree(path, crud['instance'])
             tega_id = crud['tega_id']
-            if ope == 'PUT':
+            if ope == OPE.PUT.name:
+                instance = subtree(path, crud['instance'])
                 t.put(instance, tega_id=tega_id, deepcopy=False)
-            elif ope == 'DELETE':
+            elif ope == OPE.DELETE.name:
                 t.delete(path2qname(path), tega_id=tega_id)
+            elif ope == OPE.ROLLBACK.name:
+                backto = crud['backto']
+                rollback(tega_id, path, backto, subscriber=subscriber)
 
 def sync_check(sync_path, digest):
     '''
@@ -874,12 +885,6 @@ def _transactions2notifications(transactions):
     for batch in transactions:
         accumulated.extend(batch[1])
     return accumulated
-
-def get_log_cache():
-    '''
-    Returns log cache
-    '''
-    return _log_cache
 
 def save_snapshot(tega_id):
     '''

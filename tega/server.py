@@ -88,9 +88,12 @@ class ManagementRestApiHandler(tornado.web.RequestHandler):
                 self.write(json.dumps(result))
                 self.set_header('Content-Type', 'application/json')
         elif cmd == 'rollback':
+            tega_id = self.get_argument('tega_id')
             root_oid = self.get_argument('root_oid', None)
             backto = self.get_argument('backto', None)
-            tega.idb.rollback(root_oid, int(backto))
+            subscriber = _tega_id2subscriber(tega_id)
+            tega.idb.rollback(tega_id, root_oid, int(backto),
+                    subscriber=subscriber)
         elif cmd == 'begin':
             tega_id = self.get_argument('tega_id')
             t = tx(subscriber=_tega_id2subscriber(tega_id))
@@ -144,10 +147,6 @@ class ManagementRestApiHandler(tornado.web.RequestHandler):
             if result:
                 self.write(json.dumps(result))
                 self.set_header('Content-Type', 'application/json')
-        elif cmd == 'log':
-            log_cache = tega.idb.get_log_cache()
-            log = json.dumps(tega.idb.get_log_cache())
-            self.write(log)
         elif cmd == 'channels':
             channels = tega.idb.get_channels()
             self.write(json.dumps(channels))

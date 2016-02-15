@@ -201,7 +201,7 @@ def newest_commit_log(server_tega_id, dir_):
     list_ = os.listdir(dir_)
     for n in list_:
         s = n.split('.')
-        if s[0] == 'log':
+        if s[0] == 'log' and s[1] == server_tega_id:
             num = int(s[-1])
             if num > max_:
                 max_ = num

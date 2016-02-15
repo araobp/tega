@@ -99,7 +99,7 @@ class Driver(object):
         else:
             self._tega_id = str(uuid.uuid4())
 
-        for cmd in ('log', 'roots', 'old', 'channels', 'subscribers',
+        for cmd in ('roots', 'old', 'channels', 'subscribers',
                     'ids', 'global', 'forwarders', 'plugins'):
             setattr(self, cmd, self._build_cmd(cmd))
 
@@ -158,7 +158,8 @@ class Driver(object):
         '''
         rollback command
         '''
-        url = self._cmdencode('rollback', root_oid=root_oid, backto=backto)
+        url = self._cmdencode('rollback', tega_id=self.tega_id,
+                root_oid=root_oid, backto=backto)
         response, body = self.conn.request(url, POST, None, HEADERS)
         return (response.status, response.reason, None)
     
