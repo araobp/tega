@@ -193,7 +193,7 @@ def is_func(str_value):
     else:
         return False
 
-def newest_commit_log(server_tega_id, dir_, increment=False):
+def commit_log_number(server_tega_id, dir_):
     '''
     Returns the newest commit log number
     '''
@@ -205,21 +205,22 @@ def newest_commit_log(server_tega_id, dir_, increment=False):
             num = int(s[-1])
             if num > max_:
                 max_ = num
-    if increment:
-        max_ += 1
-    return 'log.{}.{}'.format(server_tega_id, str(max_))
+    return max_
 
 def readline_reverse(fd):
     '''
     readline() in reversed order
 
+    Caveat: the first value yielded by this generator is ''
+    that should be ignored by the consumer in most of cases.
+
     Usage example:
-    fd = open('test.txt')
-    g = readline_reverse(fd)
-    print(next(g))
-    print(next(g))
-          :
-    fd.close()
+
+    with open('test.txt') as fd:
+        g = readline_reverse(fd)
+        print(next(g))
+        print(next(g))
+             :
     '''
     fd.seek(0, os.SEEK_END)
     p = fd.tell()

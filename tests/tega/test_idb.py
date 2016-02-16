@@ -160,5 +160,68 @@ class TestSequence(unittest.TestCase):
         d1a = {'b': 1}
         self.assertEqual(d1a, d3)
 
+    def test_loglist_for_sync(self):
+        r = tega.tree.Cont('r')
+        r.a.b = 1
+        r.a.c = 2
+        r.a.d = 3
+        r.a.e = 4
+        r.a.f = 5
+        r.a.g = 6
+        r.a.h = 7
+        r.a.i = 8
+        r.a.j = 9
+
+        # ver 0
+        with tega.idb.tx(subscriber = self.subscriber) as t:
+            t.put(r.a.b)
+            t.put(r.a.c)
+        # ver 1
+        with tega.idb.tx(subscriber = self.subscriber) as t:
+            t.delete(path='r.a.c')
+            t.put(r.a.d)
+        tega.idb.save_snapshot(tega_id)
+
+        # ver 2
+        with tega.idb.tx(subscriber = self.subscriber) as t:
+            t.put(r.a.e)
+            t.put(r.a.f)
+            t.delete(path='r.a.f')
+        # ver 3
+        with tega.idb.tx(subscriber = self.subscriber) as t:
+            t.put(r.a.g)
+        tega.idb.save_snapshot(tega_id)
+
+        # ver 4
+        with tega.idb.tx(subscriber = self.subscriber) as t:
+            t.put(r.a.h)
+
+        # ver 3
+        tega.idb.rollback(tega_id=tega_id, root_oid='r', backto=-1,
+                subscriber=self.subscriber)
+
+        # ver 4
+        with tega.idb.tx(subscriber = self.subscriber) as t:
+            t.put(r.a.i)
+            t.delete(path='r.a.i')
+            t.put(r.a.j)
+
+        data0 = [{'path': 'r.a.e', 'instance': 4, 'ope': 'PUT', 'tega_id': 'ne1_appl'},
+                {'path': 'r.a.f', 'instance': 5, 'ope': 'PUT', 'tega_id': 'ne1_appl'},
+                {'path': 'r.a.f', 'instance': 5, 'ope': 'DELETE', 'tega_id': 'ne1_appl'},
+                {'path': 'r.a.g', 'instance': 6, 'ope': 'PUT', 'tega_id': 'ne1_appl'},
+                {'path': 'r.a.h', 'instance': 7, 'ope': 'PUT', 'tega_id': 'ne1_appl'},
+                {'path': 'r.a.i', 'instance': 8, 'ope': 'PUT', 'tega_id': 'ne1_appl'},
+                {'path': 'r.a.i', 'instance': 8, 'ope': 'DELETE', 'tega_id': 'ne1_appl'},
+                {'path': 'r.a.j', 'instance': 9, 'ope': 'PUT', 'tega_id': 'ne1_appl'}]
+        data1 = [{'path': 'r.a.i', 'instance': 8, 'ope': 'PUT', 'tega_id': 'ne1_appl'},
+                {'path': 'r.a.i', 'instance': 8, 'ope': 'DELETE', 'tega_id': 'ne1_appl'},
+                {'path': 'r.a.j', 'instance': 9, 'ope': 'PUT', 'tega_id': 'ne1_appl'}]
+        data2 = []
+
+        self.assertEqual(data0,tega.idb.loglist_for_sync('r', 0))
+        self.assertEqual(data1, tega.idb.loglist_for_sync('r', 3))
+        self.assertEqual(data2, tega.idb.loglist_for_sync('r', 6))
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

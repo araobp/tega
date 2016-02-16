@@ -1,7 +1,7 @@
 from tega.subscriber import SCOPE
 from tega.messaging import request, REQUEST_TYPE
 from tega.tree import Cont, RPC
-from tega.util import path2qname, qname2path, dict2cont, subtree, deserialize, copy_and_childref, align_vector, newest_commit_log, readline_reverse
+from tega.util import path2qname, qname2path, dict2cont, subtree, deserialize, copy_and_childref, align_vector, commit_log_number, readline_reverse
 
 import copy
 import collections
@@ -37,6 +37,9 @@ subscribers = {}  # subscribers subscribing channels
 subscribe_forwarders = set()
 old_roots_len = OLD_ROOTS_LEN  # The max number of old roots kept in idb 
 
+def _commit_log_filename(tega_id, num):
+    return 'log.{}.{}'.format(tega_id, str(num))
+
 class OPE(Enum):
     '''
     CRUD operations
@@ -68,8 +71,9 @@ def start(data_dir, tega_id, maxlen=OLD_ROOTS_LEN):
     global server_tega_id
     server_tega_id = tega_id
     _log_dir = os.path.join(os.path.expanduser(data_dir))
-    log_file_name = newest_commit_log(server_tega_id, _log_dir)
-    log_file = os.path.join(_log_dir, log_file_name)
+    num = commit_log_number(server_tega_id, _log_dir)
+    filename = _commit_log_filename(server_tega_id, num)
+    log_file = os.path.join(_log_dir, filename)
     _log_fd = open(log_file, 'a+')  # append-only file
     old_roots_len = maxlen
 
@@ -95,11 +99,23 @@ def clear():
     '''
     Empties tega-db file and in-memory DB
     '''
-    global _idb, _old_roots
-    _log_fd.seek(0)
-    _log_fd.truncate()
+    global _log_fd, _log_dir, _idb, _old_roots, server_tega_id
+
+    # Clears idb
     _idb = {}
     _old_roots = {}
+
+    # Removes commit log files
+    _log_fd.close()
+    max_ = commit_log_number(server_tega_id, _log_dir)
+    for i in range(0, max_ + 1):
+        log_file = os.path.join(_log_dir, _commit_log_filename(server_tega_id, i))
+        if os.path.exists(log_file):
+            os.remove(log_file)
+
+    # Reopens an empty commit log file
+    log_file = os.path.join(_log_dir, _commit_log_filename(server_tega_id, 0))
+    _log_fd = open(log_file, 'a+')  # append-onlyfile
 
 def subscribe(subscriber, path, scope=SCOPE.LOCAL):
     '''
@@ -841,46 +857,80 @@ def reload_log():
 
 def loglist_for_sync(root_oid, version):
     '''
+    Accumulates log entries until the version.
 
+    log.global.0       log.global.l       log.global.n
+    +------------+     +------------+     +------------+ ^
+    |            |     |    SS      |     |    SS      | |
+    |            |     |------------|     |            | |
+    |            |     |            | ^   |            | |
+    |            |     |            | |   |            | |
+    +------------+     +------------+ |   +------------+ |
     '''
-    multi = []
-    g = readline_reverse(_log_fd)
+    notifications = []
     version_ = _idb[root_oid]['_version']
+    if version_ <= version:
+        return notifications
 
-    while True:
-        try:
-            line = next(g).rstrip('\n')
-        except StopIteration:
-            break
-        if line.startswith(COMMIT_FINISH_MARKER) or line.startswith(COMMIT_START_MARKER) or line.startswith(SYNC_CONFIRMED_MARKER):
-            pass
-        elif line.startswith(ROLLBACK_MARKER):
-            args = line.split(' ')
-            root_oid_ = args[1]
-            if root_oid_ == root_oid:
-                backto = args[0]
-                tega_id = args[2]
-                log = log_entry(ope=OPE.ROLLBACK.name, path=root_oid,
-                        tega_id=tega_id, instance=None, backto=backto)
-                multi.insert(0, log)
-                version_ += 1
-                if version_ <= version:
+    max_ = commit_log_number(server_tega_id, _log_dir)
+
+    continue_ = True
+    begin = False
+    match = False
+
+    while continue_ and max_ >= 0:
+        filename = _commit_log_filename(server_tega_id, max_)
+        log_file = os.path.join(_log_dir, filename)
+        max_ -= 1
+
+        with open(log_file, 'r') as fd:
+            g = readline_reverse(fd)
+            while True:
+                try:
+                    line = next(g).rstrip('\n')
+                except StopIteration:
                     break
-        else:
-            log = eval(log)
-            ope = log['ope']
-            path = log['path']
-            tega_id = log['tega_id']
-            instance = log['instance']
-            if ope == OPE.SS.name:
-                pass
-            elif path.split('.')[0] == root_oid:
-                log = log_entry(ope=ope, path=path, tega_id=tega_id, instance=instance)
-                mutli.insert(0, log)
-                version_ -= 1
-                if version_ <= version:
-                    break
-    return multi
+
+                if line == '':
+                    pass
+                elif line.startswith(COMMIT_FINISH_MARKER):
+                    begin = True
+                elif line.startswith(COMMIT_START_MARKER):
+                    begin = False
+                    if match:
+                        version_ -= 1
+                        match = False
+                    if version_ <= version:
+                        continue_ = False
+                        break
+                elif line.startswith(ROLLBACK_MARKER):
+                    args = line.split(' ')
+                    root_oid_ = args[1]
+                    if root_oid_ == root_oid:
+                        backto = args[0]
+                        tega_id = args[2]
+                        log = log_entry(ope=OPE.ROLLBACK.name, path=root_oid,
+                                tega_id=tega_id, instance=None, backto=backto)
+                        notifications.insert(0, log)
+                        version_ -= 1
+                        if version_ <= version:
+                            continue_ = False
+                            break
+                elif begin:
+                    log = eval(line)
+                    ope = log['ope']
+                    path = log['path']
+                    tega_id = log['tega_id']
+                    instance = log['instance']
+                    if ope == OPE.SS.name:
+                        pass
+                    elif path.split('.')[0] == root_oid:
+                        match = True
+                        log = log_entry(ope=ope, path=path, tega_id=tega_id,
+                                instance=instance)
+                        notifications.insert(0, log)
+
+    return notifications
 
 def crud_batch(notifications, subscriber=None):
     '''
@@ -932,13 +982,14 @@ def save_snapshot(tega_id):
     '''
     Take a snapshot of _idb and saves it to the hard disk.
     '''
-    log_file_name = newest_commit_log(server_tega_id, _log_dir, increment=True)  # Increments the log seq number
     _idb_snapshot = {}
     for root_oid in _idb:
         _idb_snapshot[root_oid] = _idb[root_oid].serialize_(internal=True,
                 serialize_ephemeral=False)
 
-    log_file = os.path.join(_log_dir, log_file_name)
+    num = commit_log_number(server_tega_id, _log_dir)
+    filename = _commit_log_filename(server_tega_id, num+1)
+    log_file = os.path.join(_log_dir, filename)
     _log_fd = open(log_file, 'a+')  # append-only file
 
     finish_marker = COMMIT_FINISH_MARKER+'{}'.format(time.time())  # TODO: is raise_exception OK?
