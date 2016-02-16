@@ -768,6 +768,8 @@ def rollback(tega_id, root_oid, backto, subscriber=None, write_log=True):
     '''
     Rollbacks a specific root to a previous version
     '''
+    next_version = _idb[root_oid]['_version'] + 1
+
     roots = _old_roots[root_oid]
     end = len(roots)
 
@@ -782,6 +784,7 @@ def rollback(tega_id, root_oid, backto, subscriber=None, write_log=True):
     version = pair[0]
     root = pair[1]
     align_vector(root)
+    root._setattr('_version', next_version)
     _idb[root_oid] = root
     marker_rollback = '{} {} {}'.format(str(backto), tega_id, root_oid)
     if _log_fd and write_log:
@@ -905,10 +908,10 @@ def loglist_for_sync(root_oid, version):
                         break
                 elif line.startswith(ROLLBACK_MARKER):
                     args = line.split(' ')
-                    root_oid_ = args[1]
+                    root_oid_ = args[2]
                     if root_oid_ == root_oid:
                         backto = args[0]
-                        tega_id = args[2]
+                        tega_id = args[1]
                         log = log_entry(ope=OPE.ROLLBACK.name, path=root_oid,
                                 tega_id=tega_id, instance=None, backto=backto)
                         notifications.insert(0, log)

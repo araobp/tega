@@ -196,32 +196,51 @@ class TestSequence(unittest.TestCase):
         with tega.idb.tx(subscriber = self.subscriber) as t:
             t.put(r.a.h)
 
-        # ver 3
+        # ver 5
         tega.idb.rollback(tega_id=tega_id, root_oid='r', backto=-1,
                 subscriber=self.subscriber)
 
-        # ver 4
+        # ver 6
         with tega.idb.tx(subscriber = self.subscriber) as t:
             t.put(r.a.i)
             t.delete(path='r.a.i')
             t.put(r.a.j)
 
-        data0 = [{'path': 'r.a.e', 'instance': 4, 'ope': 'PUT', 'tega_id': 'ne1_appl'},
-                {'path': 'r.a.f', 'instance': 5, 'ope': 'PUT', 'tega_id': 'ne1_appl'},
-                {'path': 'r.a.f', 'instance': 5, 'ope': 'DELETE', 'tega_id': 'ne1_appl'},
-                {'path': 'r.a.g', 'instance': 6, 'ope': 'PUT', 'tega_id': 'ne1_appl'},
-                {'path': 'r.a.h', 'instance': 7, 'ope': 'PUT', 'tega_id': 'ne1_appl'},
-                {'path': 'r.a.i', 'instance': 8, 'ope': 'PUT', 'tega_id': 'ne1_appl'},
-                {'path': 'r.a.i', 'instance': 8, 'ope': 'DELETE', 'tega_id': 'ne1_appl'},
-                {'path': 'r.a.j', 'instance': 9, 'ope': 'PUT', 'tega_id': 'ne1_appl'}]
-        data1 = [{'path': 'r.a.i', 'instance': 8, 'ope': 'PUT', 'tega_id': 'ne1_appl'},
-                {'path': 'r.a.i', 'instance': 8, 'ope': 'DELETE', 'tega_id': 'ne1_appl'},
-                {'path': 'r.a.j', 'instance': 9, 'ope': 'PUT', 'tega_id': 'ne1_appl'}]
-        data2 = []
+        '''
+        print(tega.idb.loglist_for_sync('r', 0))
+        print(tega.idb.loglist_for_sync('r', 3))
+        print(tega.idb.loglist_for_sync('r', 5))
+        print(tega.idb.loglist_for_sync('r', 6))
+        '''
+
+        data0 = [{'ope': 'DELETE', 'instance': 2, 'path': 'r.a.c', 'tega_id': 'ne1_appl'},
+                {'ope': 'PUT', 'instance': 3, 'path': 'r.a.d', 'tega_id': 'ne1_appl'},
+                {'ope': 'PUT', 'instance': 4, 'path': 'r.a.e', 'tega_id': 'ne1_appl'},
+                {'ope': 'PUT', 'instance': 5, 'path': 'r.a.f', 'tega_id': 'ne1_appl'},
+                {'ope': 'DELETE', 'instance': 5, 'path': 'r.a.f', 'tega_id': 'ne1_appl'},
+                {'ope': 'PUT', 'instance': 6, 'path': 'r.a.g', 'tega_id': 'ne1_appl'},
+                {'ope': 'PUT', 'instance': 7, 'path': 'r.a.h', 'tega_id': 'ne1_appl'},
+                {'ope': 'ROLLBACK', 'instance': None, 'backto': '-1', 'path': 'r', 'tega_id': 'test_idb'},
+                {'ope': 'PUT', 'instance': 8, 'path': 'r.a.i', 'tega_id': 'ne1_appl'},
+                {'ope': 'DELETE', 'instance': 8, 'path': 'r.a.i', 'tega_id': 'ne1_appl'},
+                {'ope': 'PUT', 'instance': 9, 'path': 'r.a.j', 'tega_id': 'ne1_appl'}]
+
+        data1 = [{'tega_id': 'ne1_appl', 'instance': 7, 'ope': 'PUT', 'path': 'r.a.h'},
+                {'tega_id': 'test_idb', 'instance': None, 'ope': 'ROLLBACK', 'backto': '-1', 'path': 'r'},
+                {'tega_id': 'ne1_appl', 'instance': 8, 'ope': 'PUT', 'path': 'r.a.i'},
+                {'tega_id': 'ne1_appl', 'instance': 8, 'ope': 'DELETE', 'path': 'r.a.i'},
+                {'tega_id': 'ne1_appl', 'instance': 9, 'ope': 'PUT', 'path': 'r.a.j'}]
+
+        data2 = [{'ope': 'PUT', 'instance': 8, 'path': 'r.a.i', 'tega_id': 'ne1_appl'},
+                {'ope': 'DELETE', 'instance': 8, 'path': 'r.a.i', 'tega_id': 'ne1_appl'},
+                {'ope': 'PUT', 'instance': 9, 'path': 'r.a.j', 'tega_id': 'ne1_appl'}]
+
+        data3 = []
 
         self.assertEqual(data0,tega.idb.loglist_for_sync('r', 0))
         self.assertEqual(data1, tega.idb.loglist_for_sync('r', 3))
-        self.assertEqual(data2, tega.idb.loglist_for_sync('r', 6))
+        self.assertEqual(data2, tega.idb.loglist_for_sync('r', 5))
+        self.assertEqual(data3, tega.idb.loglist_for_sync('r', 6))
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
