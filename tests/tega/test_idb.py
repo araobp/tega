@@ -213,27 +213,25 @@ class TestSequence(unittest.TestCase):
         print(tega.idb.loglist_for_sync('r', 6))
         '''
 
-        data0 = [{'ope': 'DELETE', 'instance': 2, 'path': 'r.a.c', 'tega_id': 'ne1_appl'},
-                {'ope': 'PUT', 'instance': 3, 'path': 'r.a.d', 'tega_id': 'ne1_appl'},
-                {'ope': 'PUT', 'instance': 4, 'path': 'r.a.e', 'tega_id': 'ne1_appl'},
-                {'ope': 'PUT', 'instance': 5, 'path': 'r.a.f', 'tega_id': 'ne1_appl'},
-                {'ope': 'DELETE', 'instance': 5, 'path': 'r.a.f', 'tega_id': 'ne1_appl'},
-                {'ope': 'PUT', 'instance': 6, 'path': 'r.a.g', 'tega_id': 'ne1_appl'},
-                {'ope': 'PUT', 'instance': 7, 'path': 'r.a.h', 'tega_id': 'ne1_appl'},
-                {'ope': 'ROLLBACK', 'instance': None, 'backto': '-1', 'path': 'r', 'tega_id': 'test_idb'},
-                {'ope': 'PUT', 'instance': 8, 'path': 'r.a.i', 'tega_id': 'ne1_appl'},
-                {'ope': 'DELETE', 'instance': 8, 'path': 'r.a.i', 'tega_id': 'ne1_appl'},
-                {'ope': 'PUT', 'instance': 9, 'path': 'r.a.j', 'tega_id': 'ne1_appl'}]
+        data0 = [[{'instance': 2, 'tega_id': 'ne1_appl', 'path': 'r.a.c', 'ope': 'DELETE'},
+                {'instance': 3, 'tega_id': 'ne1_appl', 'path': 'r.a.d', 'ope': 'PUT'}],
+                [{'instance': 4, 'tega_id': 'ne1_appl', 'path': 'r.a.e', 'ope': 'PUT'},
+                {'instance': 5, 'tega_id': 'ne1_appl', 'path': 'r.a.f', 'ope': 'PUT'},
+                {'instance': 5, 'tega_id': 'ne1_appl', 'path': 'r.a.f', 'ope': 'DELETE'}],
+                [{'instance': 6, 'tega_id': 'ne1_appl', 'path': 'r.a.g', 'ope': 'PUT'}],
+                [{'instance': 7, 'tega_id': 'ne1_appl', 'path': 'r.a.h', 'ope': 'PUT'}],
+                [{'instance': None, 'tega_id': 'test_idb', 'backto': -1, 'ope': 'ROLLBACK', 'path': 'r'}],
+                [{'instance': 8, 'tega_id': 'ne1_appl', 'path': 'r.a.i', 'ope': 'PUT'}, {'instance': 8, 'tega_id': 'ne1_appl', 'path': 'r.a.i', 'ope': 'DELETE'}, {'instance': 9, 'tega_id': 'ne1_appl', 'path': 'r.a.j', 'ope': 'PUT'}]]
 
-        data1 = [{'tega_id': 'ne1_appl', 'instance': 7, 'ope': 'PUT', 'path': 'r.a.h'},
-                {'tega_id': 'test_idb', 'instance': None, 'ope': 'ROLLBACK', 'backto': '-1', 'path': 'r'},
-                {'tega_id': 'ne1_appl', 'instance': 8, 'ope': 'PUT', 'path': 'r.a.i'},
-                {'tega_id': 'ne1_appl', 'instance': 8, 'ope': 'DELETE', 'path': 'r.a.i'},
-                {'tega_id': 'ne1_appl', 'instance': 9, 'ope': 'PUT', 'path': 'r.a.j'}]
+        data1 = [[{'instance': 7, 'tega_id': 'ne1_appl', 'path': 'r.a.h', 'ope': 'PUT'}],
+                [{'instance': None, 'tega_id': 'test_idb', 'backto': -1, 'ope': 'ROLLBACK', 'path': 'r'}],
+                [{'instance': 8, 'tega_id': 'ne1_appl', 'path': 'r.a.i', 'ope': 'PUT'},
+                {'instance': 8, 'tega_id': 'ne1_appl', 'path': 'r.a.i', 'ope': 'DELETE'},
+                {'instance': 9, 'tega_id': 'ne1_appl', 'path': 'r.a.j', 'ope': 'PUT'}]]
 
-        data2 = [{'ope': 'PUT', 'instance': 8, 'path': 'r.a.i', 'tega_id': 'ne1_appl'},
-                {'ope': 'DELETE', 'instance': 8, 'path': 'r.a.i', 'tega_id': 'ne1_appl'},
-                {'ope': 'PUT', 'instance': 9, 'path': 'r.a.j', 'tega_id': 'ne1_appl'}]
+        data2 = [[{'instance': 8, 'tega_id': 'ne1_appl', 'path': 'r.a.i', 'ope': 'PUT'},
+                {'instance': 8, 'tega_id': 'ne1_appl', 'path': 'r.a.i', 'ope': 'DELETE'},
+                {'instance': 9, 'tega_id': 'ne1_appl', 'path': 'r.a.j', 'ope': 'PUT'}]]
 
         data3 = []
 
