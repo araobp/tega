@@ -13,6 +13,7 @@ callback = {}
 
 class REQUEST_TYPE(Enum):
     RPC = 'RPC'
+    SYNC = 'SYNC'
 
 def build_parser(direction):
     '''
@@ -86,8 +87,7 @@ def request(subscriber, request_type, tega_id, path, **kwargs):
     callback[seq_no] = queue  # synchronous queue per request/response
     try:
         result = yield queue.get(timeout=timedelta(seconds=REQUEST_TIMEOUT))
-        raise gen.Return(result)  # Py <= 3.2 cannot return data from a generator.
-        # return result  # Py => 3.3 can return data from a generator.
+        return result
     except gen.TimeoutError:
         raise
 

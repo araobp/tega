@@ -870,10 +870,16 @@ def loglist_for_sync(root_oid, version):
     |            |     |            | |   |            | |
     +------------+     +------------+ |   +------------+ |
     '''
+    multi = []
     notifications = []
-    version_ = _idb[root_oid]['_version']
+    if version < 0:
+        version = -1
+    try:
+        version_ = _idb[root_oid]['_version']
+    except KeyError:
+        return multi
     if version_ <= version:
-        return notifications
+        return multi 
 
     max_ = commit_log_number(server_tega_id, _log_dir)
 
@@ -903,6 +909,8 @@ def loglist_for_sync(root_oid, version):
                     if match:
                         version_ -= 1
                         match = False
+                        multi.insert(0, notifications)
+                        notifications = []
                     if version_ <= version:
                         continue_ = False
                         break
@@ -913,8 +921,13 @@ def loglist_for_sync(root_oid, version):
                         backto = args[0]
                         tega_id = args[1]
                         log = log_entry(ope=OPE.ROLLBACK.name, path=root_oid,
-                                tega_id=tega_id, instance=None, backto=backto)
-                        notifications.insert(0, log)
+                                tega_id=tega_id, instance=None,
+                                backto=int(backto))
+                        if notifications:
+                            multi.insert(0, notifications)
+                        notifications = [log]
+                        multi.insert(0, notifications)
+                        notifications = []
                         version_ -= 1
                         if version_ <= version:
                             continue_ = False
@@ -933,7 +946,7 @@ def loglist_for_sync(root_oid, version):
                                 instance=instance)
                         notifications.insert(0, log)
 
-    return notifications
+    return multi 
 
 def crud_batch(notifications, subscriber=None):
     '''
@@ -948,24 +961,29 @@ def crud_batch(notifications, subscriber=None):
                 instance = subtree(path, crud['instance'])
                 t.put(instance, tega_id=tega_id, deepcopy=False)
             elif ope == OPE.DELETE.name:
-                t.delete(path2qname(path), tega_id=tega_id)
+                t.delete(path, tega_id=tega_id)
             elif ope == OPE.ROLLBACK.name:
                 backto = crud['backto']
                 rollback(tega_id, path, backto, subscriber=subscriber)
 
-def sync_check(sync_path, digest):
+def sync(root_oid, version, subscriber):
     '''
-    Checks if global idb and local idb are synchronized.
+    Leader-Follower synchronization on the root_oid.
     '''
-    _commiters = commiters(sync_path)
-    _digest = commiters_hash(_commiters)
+    global _idb
     logging.debug(
-            'sync_check\n digest: {}\n _commiters: {}\n _digest: {}'.
-            format(digest, _commiters, _digest))
-    if digest == _digest:
-        return True
-    else:
-        return False
+            'sync -- root_oid: {}, version: {}'.format(root_oid, version))
+    version_ = -1
+
+    if root_oid in _idb:
+        version_ = _idb[root_oid]['_version']
+
+    if version_ > version:  # out of sync
+        multi = loglist_for_sync(root_oid, version)
+        for notifications in multi:
+            subscriber.on_notify(notifications)
+    else:  # in sync
+        pass
 
 def _transactions2notifications(transactions):
     '''
@@ -985,6 +1003,7 @@ def save_snapshot(tega_id):
     '''
     Take a snapshot of _idb and saves it to the hard disk.
     '''
+    global _log_fd
     _idb_snapshot = {}
     for root_oid in _idb:
         _idb_snapshot[root_oid] = _idb[root_oid].serialize_(internal=True,
@@ -993,6 +1012,8 @@ def save_snapshot(tega_id):
     num = commit_log_number(server_tega_id, _log_dir)
     filename = _commit_log_filename(server_tega_id, num+1)
     log_file = os.path.join(_log_dir, filename)
+    if _log_fd:
+        _log_fd.close()
     _log_fd = open(log_file, 'a+')  # append-only file
 
     finish_marker = COMMIT_FINISH_MARKER+'{}'.format(time.time())  # TODO: is raise_exception OK?
@@ -1060,7 +1081,7 @@ def rpc2(path, args=None, kwargs=None, tega_id=None):
     This method is called by server.py
     '''
     try:
-        raise gen.Return(rpc(path, args, kwargs))
+        return rpc(path, args, kwargs)
     except NonLocalRPC:
         if tega_id:
             subscriber = get_subscriber_for_local_db(path)
@@ -1071,7 +1092,7 @@ def rpc2(path, args=None, kwargs=None, tega_id=None):
                                        path=path,
                                        args=args,
                                        kwargs=kwargs)
-                raise gen.Return(result)
+                return result
             except gen.TimeoutError:
                 raise
         else:
@@ -1085,7 +1106,7 @@ def rpc2(path, args=None, kwargs=None, tega_id=None):
                                    path=path,
                                    args=args,
                                    kwargs=kwargs)
-            raise gen.Return(result)
+            return result
         except gen.TimeoutError:
             raise
 

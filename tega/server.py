@@ -50,6 +50,26 @@ def _tega_id2subscriber(tega_id):
         subscriber = subscriber_clients[tega_id]
     return subscriber
 
+@gen.coroutine
+def sync_check(tega_id, root_oids, subscriber):
+    kwargs = {}
+    for root_oid in root_oids:
+        try:
+            version = tega.idb.get_version(root_oid)
+        except KeyError:
+            version = -1
+        kwargs[root_oid] = version
+    logging.debug('sync check -- {}'.format(kwargs))
+    try:
+        result = yield request(subscriber,
+                               REQUEST_TYPE.SYNC,
+                               tega_id=tega_id,
+                               path=None,
+                               kwargs=kwargs)
+        return result
+    except gen.TimeoutError:
+        raise
+
 class WebSocketSubscriber(Subscriber):
     '''
     WebSocket subscriber.
@@ -135,8 +155,12 @@ class ManagementRestApiHandler(tornado.web.RequestHandler):
                 else:
                     raise tornado.web.HTTPError(404)
         elif cmd == 'sync':
-            # TODO
-            pass
+            if server_as_subscriber:
+                sync_check(server_as_subscriber.tega_id,
+                        server_as_subscriber.sync,
+                        server_as_subscriber.subscriber)
+            else:
+                raise tornado.web.HTTPError(404)
         elif cmd == 'ss':
             tega_id = self.get_argument('tega_id', None)
             tega.idb.save_snapshot(tega_id)
@@ -349,10 +373,14 @@ class PubSubHandler(tornado.websocket.WebSocketHandler):
             type_ = REQUEST_TYPE(param[1])
             if type_ == REQUEST_TYPE.RPC:
                 self._route_rpc_request(param, body)
+            elif type_ == REQUEST_TYPE.SYNC:
+                self._sync_request(param, body)
         elif cmd == 'RESPONSE':
             type_ = REQUEST_TYPE(param[1])
             if type_ == REQUEST_TYPE.RPC:
                 self._route_rpc_response(param, body)
+            elif type_ == REQUEST_TYPE.SYNC:
+                on_response(param, body)
 
     def _route_rpc_request(self, param, body):
         seq_no = int(param[0])
@@ -393,6 +421,19 @@ class PubSubHandler(tornado.websocket.WebSocketHandler):
                            REQUEST_TYPE.RPC.name,
                            tega_id,
                            json.dumps(body)))
+
+    def _sync_request(self, param, body):
+        seq_no = int(param[0])
+        tega_id = param[2]
+        path = param[3]
+        args, kwargs = parse_rpc_body(body)
+        for root_oid, version in kwargs.items():
+            notifications = tega.idb.sync(root_oid, version, self.subscriber)
+        self.write_message('RESPONSE {} {} {}\n{}'.
+                format(seq_no,
+                       REQUEST_TYPE.SYNC.name,
+                       tega_id,
+                       json.dumps(None)))
 
     def on_close(self):
         '''
@@ -496,9 +537,9 @@ class _SubscriberClient(object):
                 self.client.write_message('SESSION {} {}'.format(
                                     self.tega_id, SCOPE.GLOBAL.value))
 
-                # Sends SUBSCRIBE sync sync to global idb.
+                # Sends SUBSCRIBE to global idb.
                 for root_oid in self.sync:
-                    self.send_subscribe(root_oid, SCOPE.SYNC)
+                    self.send_subscribe(root_oid, SCOPE.GLOBAL)
 
                 # (re-)sends SUBSCRIBE <global channel> <scope>
                 # to global idb.
