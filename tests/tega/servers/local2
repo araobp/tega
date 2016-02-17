@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-$1/server -p 8890 -d $1 -H localhost -P 8888 -S inventory.ne2 -s -t local2
+$1/server -p 8890 -d $1 -H localhost -P 8888 -S inventory.ne2 -t local2

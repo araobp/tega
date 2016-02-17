@@ -65,7 +65,22 @@ def sync_check(tega_id, root_oids, subscriber):
                                REQUEST_TYPE.SYNC,
                                tega_id=tega_id,
                                path=None,
+                               args=None,
                                kwargs=kwargs)
+        return result
+    except gen.TimeoutError:
+        raise
+
+@gen.coroutine
+def ask_global_db(tega_id, root_oids, subscriber):
+    logging.debug('ask global db -- {}'.format(root_oids))
+    try:
+        result = yield request(subscriber,
+                               REQUEST_TYPE.REFER,
+                               tega_id=tega_id,
+                               path=None,
+                               args=root_oids,
+                               kwargs=None)
         return result
     except gen.TimeoutError:
         raise
@@ -157,7 +172,7 @@ class ManagementRestApiHandler(tornado.web.RequestHandler):
         elif cmd == 'sync':
             if server_as_subscriber:
                 sync_check(server_as_subscriber.tega_id,
-                        server_as_subscriber.sync,
+                        server_as_subscriber.config,
                         server_as_subscriber.subscriber)
             else:
                 raise tornado.web.HTTPError(404)
@@ -198,14 +213,6 @@ class ManagementRestApiHandler(tornado.web.RequestHandler):
                 _plugins[v.tega_id] = v.scope.value
             self.write(json.dumps(_plugins))
             self.set_header('Content-Type', 'application/json')
-
-class SyncApiHandler(tornado.web.RequestHandler):
-    '''
-    REST API for tega-db sync operations
-    '''
-    def post(self, cmd):
-        # TODO
-        pass
 
 class RestApiHandler(tornado.web.RequestHandler):
     '''
@@ -375,11 +382,15 @@ class PubSubHandler(tornado.websocket.WebSocketHandler):
                 self._route_rpc_request(param, body)
             elif type_ == REQUEST_TYPE.SYNC:
                 self._sync_request(param, body)
+            elif type_ == REQUEST_TYPE.REFER:
+                self._refer_request(param, body)
         elif cmd == 'RESPONSE':
             type_ = REQUEST_TYPE(param[1])
             if type_ == REQUEST_TYPE.RPC:
                 self._route_rpc_response(param, body)
             elif type_ == REQUEST_TYPE.SYNC:
+                on_response(param, body)
+            elif type_ == REQUEST_TYPE.REFER:
                 on_response(param, body)
 
     def _route_rpc_request(self, param, body):
@@ -432,6 +443,20 @@ class PubSubHandler(tornado.websocket.WebSocketHandler):
         self.write_message('RESPONSE {} {} {}\n{}'.
                 format(seq_no,
                        REQUEST_TYPE.SYNC.name,
+                       tega_id,
+                       json.dumps(None)))
+
+    def _refer_request(self, param, body):
+        seq_no = int(param[0])
+        tega_id = param[2]
+        path = param[3]
+        args, kwargs = parse_rpc_body(body)
+        for root_oids in args:
+            # TODO: SUB
+            pass
+        self.write_message('RESPONSE {} {} {}\n{}'.
+                format(seq_no,
+                       REQUEST_TYPE.REFER.name,
                        tega_id,
                        json.dumps(None)))
 
@@ -490,10 +515,11 @@ class _SubscriberClient(object):
 
     '''
 
-    def __init__(self, mhost, mport, sync, tega_id):
+    def __init__(self, mhost, mport, config, operational, tega_id):
         self.mhost = mhost
         self.mport = mport
-        self.sync = sync
+        self.config = config 
+        self.operational = operational 
         self.tega_id = tega_id
         self.client = None
         self.on_notify = None
@@ -538,7 +564,7 @@ class _SubscriberClient(object):
                                     self.tega_id, SCOPE.GLOBAL.value))
 
                 # Sends SUBSCRIBE to global idb.
-                for root_oid in self.sync:
+                for root_oid in self.config:
                     self.send_subscribe(root_oid, SCOPE.GLOBAL)
 
                 # (re-)sends SUBSCRIBE <global channel> <scope>
@@ -597,8 +623,22 @@ class _SubscriberClient(object):
         '''
         Receives a message from global idb.
         '''
+
         while True:
+
             yield self._connect_to_global_db()
+            
+            # synchronizes with config trees on the global db
+            if self.config:
+                logging.info('local db to sync with config trees: {}'.format(self.config))
+                sync_check(self.tega_id, self.config, self.subscriber)
+
+            # asks the global db to synchronize with operational trees on the
+            # local db
+            if self.operational:
+                logging.info('global db to sync with operational trees: {}'.format(self.config))
+                ask_global_db(self.tega_id, self.operational, self.subscriber)
+
             while True:
                 try:
                     msg = yield self.client.read_message()
@@ -631,8 +671,10 @@ def main():
             default=None)
     parser.add_argument("-P", "--mport", help="Global idb REST API server port",
                         type=int, default=None)
-    parser.add_argument("-S", "--sync",
-            help="Root oids to be synchronized with", type=str, nargs='*', default=None)
+    parser.add_argument("-C", "--config",
+            help="Root object IDs of config trees", type=str, nargs='*', default=None)
+    parser.add_argument("-O", "--operational",
+            help="Root object IDs of operational trees", type=str, nargs='*', default=None)
     parser.add_argument("-t", "--tegaid", help="tega ID", type=str,
             default=str(uuid.uuid4()))
     parser.add_argument("-e", "--extensions", help="Directory of tega plugins",
@@ -642,12 +684,12 @@ def main():
 
     args = parser.parse_args()
 
-    print('{}\n\ntega_id: {}, sync: {}\n'.format(LOGO, args.tegaid,
-        args.sync))
+    print('{}\n\ntega_id: {},config: {}\n'.format(LOGO, args.tegaid,
+        args.config))
 
-    if args.sync:
+    if args.config:
         if not args.mhost or not args.mport:
-            print('All --mhost, --mport and --sync options MUST be specified')
+            print('All --mhost, --mport and --config options MUST be specified')
             sys.exit(1)
         else:
             mhost = args.mhost
@@ -676,7 +718,6 @@ def main():
     application = tornado.web.Application([
         (r'/_pubsub', PubSubHandler),
         (r'/_rpc', RpcHandler),
-        (r'/_(sync_[a-z]+)', SyncApiHandler),
         (r'/_(.*)', ManagementRestApiHandler),
         (r'(.*)', RestApiHandler)
     ])
@@ -685,21 +726,10 @@ def main():
         tornado.ioloop.PeriodicCallback(transaction_gc,
                 TRANSACTION_GC_PERIOD * 1000).start()
         
-        if args.mhost and args.mport and args.sync:
+        if args.mhost and args.mport and args.config:
             tega_id = args.tegaid
             server_as_subscriber = _SubscriberClient(
-                    args.mhost, args.mport, args.sync, tega_id)
-            if args.sync:
-                while (True):
-                    try:
-                        # TODO
-                        pass
-                        break
-                    except ConnectionRefusedError:
-                        print('global idb does not seem to be running...')
-                        time.sleep(CONNECT_RETRY_TIMER)
-                print('synchronized with peer')
-
+                    args.mhost, args.mport, args.config, args.operational, tega_id)
             tornado.ioloop.IOLoop.current().run_sync(
                     server_as_subscriber.subscriber_loop)
         else:

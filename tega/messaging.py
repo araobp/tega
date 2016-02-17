@@ -14,6 +14,7 @@ callback = {}
 class REQUEST_TYPE(Enum):
     RPC = 'RPC'
     SYNC = 'SYNC'
+    REFER = 'REFER'
 
 def build_parser(direction):
     '''
