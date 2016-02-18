@@ -34,6 +34,7 @@ mhost = None
 mport = None
 sync_path = None
 server_as_subscriber = None
+server_tega_id = None
 
 subscriber_clients = {}
 
@@ -50,12 +51,47 @@ def _tega_id2subscriber(tega_id):
         subscriber = subscriber_clients[tega_id]
     return subscriber
 
+@gen.coroutine
+def sync_check(root_oids, subscriber):
+    kwargs = {}
+    for root_oid in root_oids:
+        try:
+            version = tega.idb.get_version(root_oid)
+        except KeyError:
+            version = -1
+        kwargs[root_oid] = version
+    logging.debug('sync check -- {}'.format(kwargs))
+    try:
+        result = yield request(subscriber,
+                               REQUEST_TYPE.SYNC,
+                               tega_id=None,
+                               path=None,
+                               args=None,
+                               kwargs=kwargs)
+        return result
+    except gen.TimeoutError:
+        raise
+
+@gen.coroutine
+def ask_global_db(root_oids, subscriber):
+    logging.debug('ask global db -- {}'.format(root_oids))
+    try:
+        result = yield request(subscriber,
+                               REQUEST_TYPE.REFER,
+                               tega_id=None,
+                               path=None,
+                               args=root_oids,
+                               kwargs=None)
+        return result
+    except gen.TimeoutError:
+        raise
+
 class WebSocketSubscriber(Subscriber):
     '''
     WebSocket subscriber.
     '''
-    def __init__(self, tega_id, scope, tornado_websocket):
-        super().__init__(tega_id, scope)
+    def __init__(self, scope, tornado_websocket):
+        super().__init__(tega_id=None, scope=scope)
         self.tornado_websocket = tornado_websocket
 
     def on_notify(self, notifications):
@@ -88,9 +124,12 @@ class ManagementRestApiHandler(tornado.web.RequestHandler):
                 self.write(json.dumps(result))
                 self.set_header('Content-Type', 'application/json')
         elif cmd == 'rollback':
+            tega_id = self.get_argument('tega_id')
             root_oid = self.get_argument('root_oid', None)
             backto = self.get_argument('backto', None)
-            tega.idb.rollback(root_oid, int(backto))
+            subscriber = _tega_id2subscriber(tega_id)
+            tega.idb.rollback(tega_id, root_oid, int(backto),
+                    subscriber=subscriber)
         elif cmd == 'begin':
             tega_id = self.get_argument('tega_id')
             t = tx(subscriber=_tega_id2subscriber(tega_id))
@@ -132,7 +171,11 @@ class ManagementRestApiHandler(tornado.web.RequestHandler):
                 else:
                     raise tornado.web.HTTPError(404)
         elif cmd == 'sync':
-            _sync_request(mhost, mport, sync_path)
+            if server_as_subscriber:
+                sync_check(server_as_subscriber.config,
+                           server_as_subscriber.subscriber)
+            else:
+                raise tornado.web.HTTPError(404)
         elif cmd == 'ss':
             tega_id = self.get_argument('tega_id', None)
             tega.idb.save_snapshot(tega_id)
@@ -143,10 +186,6 @@ class ManagementRestApiHandler(tornado.web.RequestHandler):
             if result:
                 self.write(json.dumps(result))
                 self.set_header('Content-Type', 'application/json')
-        elif cmd == 'log':
-            log_cache = tega.idb.get_log_cache()
-            log = json.dumps(tega.idb.get_log_cache())
-            self.write(log)
         elif cmd == 'channels':
             channels = tega.idb.get_channels()
             self.write(json.dumps(channels))
@@ -174,38 +213,6 @@ class ManagementRestApiHandler(tornado.web.RequestHandler):
                 _plugins[v.tega_id] = v.scope.value
             self.write(json.dumps(_plugins))
             self.set_header('Content-Type', 'application/json')
-
-class SyncApiHandler(tornado.web.RequestHandler):
-    '''
-    REST API for tega-db sync operations
-    '''
-    def post(self, cmd):
-        if cmd == 'sync_check':
-            sync_path = self.get_argument('sync_path')
-            digest = self.get_argument('digest')
-            if sync_path and digest:
-                synchronized = tega.idb.sync_check(sync_path, digest)
-                if not synchronized:
-                    raise tornado.web.HTTPError(409)
-        elif cmd == 'sync_db':
-            sync_path = self.get_argument('sync_path')
-            transactions = tornado.escape.json_decode(self.request.body)
-            tega_id = self.get_argument('tega_id')
-            subscriber = _tega_id2subscriber(tega_id)
-            if sync_path and transactions is not None:
-                confirmed = tega.idb.get_sync_confirmed(sync_path)
-                _transactions = tega.idb.conflict_resolution(subscriber,
-                                                             sync_path,
-                                                             transactions)
-                version = _get_sync_path_version(sync_path)
-                sync_ver = 0
-                if confirmed:
-                    sync_ver = confirmed['sync_ver'] + 1
-                tega.idb.sync_confirmed_server(tega_id, sync_path, version, sync_ver)
-                self.write(json.dumps(_transactions))
-                self.set_header('Content-Type', 'application/json')
-            else:
-                raise tornado.web.HTTPError(400)
 
 class RestApiHandler(tornado.web.RequestHandler):
     '''
@@ -310,7 +317,7 @@ class PubSubHandler(tornado.websocket.WebSocketHandler):
 
     def initialize(self):
         self.parser = build_parser('server')
-        self.tega_id = None
+        self.tega_id = None  # remote tega_id set by SESSION
         self.subscriber = None
 
     def check_origin(self, origin):
@@ -334,7 +341,8 @@ class PubSubHandler(tornado.websocket.WebSocketHandler):
         if cmd == 'SESSION':
             self.tega_id = param[0]  # tega ID from a tega client
             scope = SCOPE(param[1])
-            self.subscriber = WebSocketSubscriber(self.tega_id, scope, self)
+            self.subscriber = WebSocketSubscriber(scope, self)
+            self.subscriber.tega_id = self.tega_id
             if scope == SCOPE.GLOBAL:
                 def _on_subscribe(path, scope):
                     self.write_message(
@@ -343,14 +351,12 @@ class PubSubHandler(tornado.websocket.WebSocketHandler):
                 tega.idb.add_subscribe_forwarder(self.subscriber)
             subscriber_clients[self.tega_id] = self.subscriber
             tega.idb.add_tega_id(self.tega_id)
-            self.write_message('SESSIONACK')
+            self.write_message('SESSIONACK {}'.format(server_tega_id))
         elif cmd == 'SUBSCRIBE':
             if param:
                 channel = param[0]
                 scope = SCOPE(param[1])
                 tega.idb.subscribe(self.subscriber, channel, scope)
-                if scope == SCOPE.SYNC:
-                    self.subscriber.on_subscribe(channel, scope)
             else:
                 logging.warn('WebSocket(server): no channel indicated in SUBSCRIBE request')
         elif cmd == 'UNSUBSCRIBE':
@@ -373,10 +379,18 @@ class PubSubHandler(tornado.websocket.WebSocketHandler):
             type_ = REQUEST_TYPE(param[1])
             if type_ == REQUEST_TYPE.RPC:
                 self._route_rpc_request(param, body)
+            elif type_ == REQUEST_TYPE.SYNC:
+                self._sync_request(param, body)
+            elif type_ == REQUEST_TYPE.REFER:
+                self._refer_request(param, body)
         elif cmd == 'RESPONSE':
             type_ = REQUEST_TYPE(param[1])
             if type_ == REQUEST_TYPE.RPC:
                 self._route_rpc_response(param, body)
+            elif type_ == REQUEST_TYPE.SYNC:
+                on_response(param, body)
+            elif type_ == REQUEST_TYPE.REFER:
+                on_response(param, body)
 
     def _route_rpc_request(self, param, body):
         seq_no = int(param[0])
@@ -417,6 +431,30 @@ class PubSubHandler(tornado.websocket.WebSocketHandler):
                            REQUEST_TYPE.RPC.name,
                            tega_id,
                            json.dumps(body)))
+
+    def _sync_request(self, param, body):
+        seq_no = int(param[0])
+        path = param[3]
+        args, kwargs = parse_rpc_body(body)
+        for root_oid, version in kwargs.items():
+            notifications = tega.idb.sync(root_oid, version, self.subscriber)
+        self.write_message('RESPONSE {} {} {}\n{}'.
+                format(seq_no,
+                       REQUEST_TYPE.SYNC.name,
+                       None,
+                       json.dumps(None)))
+
+    def _refer_request(self, param, body):
+        seq_no = int(param[0])
+        path = param[3]
+        args, kwargs = parse_rpc_body(body)
+        for root_oids in args:
+            self.subscriber.on_subscribe(root_oids, SCOPE.GLOBAL)
+        self.write_message('RESPONSE {} {} {}\n{}'.
+                format(seq_no,
+                       REQUEST_TYPE.REFER.name,
+                       None,
+                       json.dumps(None)))
 
     def on_close(self):
         '''
@@ -462,68 +500,6 @@ def transaction_gc():
             else:
                 transactions[txid]['expire'] = expire - 1
 
-def _get_sync_path_version(sync_path):
-    '''
-    Gets version of the sync_path.
-
-    Returns -1 if the sync_path is not found in idb.
-    '''
-    version = -1
-    try:
-        version = tega.idb.get_version(sync_path) 
-    except KeyError:
-        logging.info('sync path "{}" not found in local tega db'.format(
-            sync_path))
-    return version
-
-def _sync_request(mhost, mport, sync_path):
-    '''
-    Synchronization request from local idb to global idb.
-
-    TODO: initiating sync request from Master to Slave as well.
-    '''
-
-    conn = httplib2.Http()
-
-    commiters = tega.idb.commiters(sync_path)
-    digest = tega.idb.commiters_hash(commiters)
-    url = 'http://{}:{}/_sync_check?sync_path={}&digest={}'.format(
-            mhost, mport, sync_path, digest)
-
-    try:
-        response, body = conn.request(url, 'POST', None, HEADERS)
-    except ConnectionRefusedError:
-        raise
-
-    logging.debug('response status: {}'.format(response.status))
-    if response.status == 200:  # Already synchronized
-        return
-
-    elif response.status == 409:  # Conflict
-        tega_id = server_as_subscriber.tega_id
-        url = 'http://{}:{}/_sync_db?sync_path={}&tega_id={}'.format(
-                mhost, mport, sync_path, tega_id)
-        url_confirmed = 'http://{}:{}'.format(mhost, mport)
-        confirmed, transactions = tega.idb.transactions_since_last_sync(sync_path)
-        logging.debug('transactions since last sync: {}'.format(transactions))
-        response, body = conn.request(url, 'POST',
-                json.dumps(transactions), HEADERS)
-        if response.status == 200:
-            _transactions = json.loads(body.decode('utf-8'))
-            logging.debug('sync response received - \n{}'.
-                    format(yaml.dump(_transactions)))
-            tega.idb.conflict_resolution(server_as_subscriber,
-                    sync_path, _transactions)
-            version = _get_sync_path_version(sync_path)
-            sync_ver = 0
-            if confirmed:
-                sync_ver = confirmed['sync_ver'] + 1
-            tega.idb.sync_confirmed(url_confirmed, sync_path, version, sync_ver)
-    else:
-        # TODO: error condition
-        logging.debug('{} {}'.format(response.status, response.reason))
-        pass
-
 class _SubscriberClient(object):
     '''
     Subscriber client for server.py itself, for db dync.
@@ -535,24 +511,27 @@ class _SubscriberClient(object):
 
     '''
 
-    def __init__(self, mhost, mport, sync_path, tega_id):
+    def __init__(self, mhost, mport, config, operational, server_tega_id):
         self.mhost = mhost
         self.mport = mport
-        self.sync_path = sync_path
-        self.tega_id = tega_id
+        self.config = config 
+        self.operational = operational 
+        self.server_tega_id = server_tega_id
         self.client = None
         self.on_notify = None
         self.parser = build_parser('client')
-        tega.idb.add_tega_id(tega_id)
+        self.client = None
+        self.subscriber = None
 
-    def _build_send_subscribe(self):
-        '''
-        Sends a SUBSCRIBE message to another tega db.
-        '''
-        def _send_subscribe(path, scope):
+    '''
+    Sends a SUBSCRIBE message to another tega db.
+    '''
+    def _send_subscribe(self, path, scope):
+        if self.client:
             self.client.write_message('SUBSCRIBE {} {}'.format(path,
-                scope.value))
-        return _send_subscribe
+                                       scope.value))
+        else:
+            raise Exception('no websocket client set')
 
     @gen.coroutine
     def _connect_to_global_db(self):
@@ -565,31 +544,28 @@ class _SubscriberClient(object):
                 self.client = yield tornado.websocket.websocket_connect(
                         WEBSOCKET_PUBSUB_URL.format(self.mhost, self.mport))
 
-                # Builds send_subscribe function
-                self.send_subscribe = self._build_send_subscribe()
-
                 # Sets WebSocketSubscriber to self
-                self.subscriber = WebSocketSubscriber(self.tega_id,
-                        SCOPE.GLOBAL, self.client)
+                self.subscriber = WebSocketSubscriber(SCOPE.GLOBAL, self.client)
 
                 # Subscribe forwarder
                 def _on_subscribe(path, scope):
-                    self.send_subscribe(path, scope)
+                    self._send_subscribe(path, scope)
                 self.subscriber.on_subscribe = _on_subscribe
                 tega.idb.add_subscribe_forwarder(self.subscriber)
 
                 # Sends SESSION to global idb.
                 self.client.write_message('SESSION {} {}'.format(
-                                    self.tega_id, SCOPE.GLOBAL.value))
+                                    self.server_tega_id, SCOPE.GLOBAL.value))
 
-                # Sends SUBSCRIBE sync_path sync to global idb.
-                self.send_subscribe(self.sync_path, SCOPE.SYNC)
+                # Sends SUBSCRIBE to global idb.
+                for root_oid in self.config:
+                    self._send_subscribe(root_oid, SCOPE.GLOBAL)
 
                 # (re-)sends SUBSCRIBE <global channel> <scope>
                 # to global idb.
                 global_channels = tega.idb.get_global_channels()
                 for channel, scope in global_channels.items():
-                    self.send_subscribe(channel, scope)
+                    self._send_subscribe(channel, scope)
 
                 break
             except socket.error as e:
@@ -604,7 +580,11 @@ class _SubscriberClient(object):
         '''
         cmd, param, body = self.parser(msg)
 
-        if cmd == 'NOTIFY':
+        if cmd == 'SESSIONACK':
+            remote_tega_id = param
+            self.subscriber.tega_id = remote_tega_id
+            tega.idb.add_tega_id(remote_tega_id)
+        elif cmd == 'NOTIFY':
             tega.idb.crud_batch(body, self.subscriber)
         elif cmd == 'MESSAGE':
             channel = param[0]
@@ -641,8 +621,22 @@ class _SubscriberClient(object):
         '''
         Receives a message from global idb.
         '''
+
         while True:
+
             yield self._connect_to_global_db()
+            
+            # synchronizes with config trees on the global db
+            if self.config:
+                logging.info('local db to sync with config trees: {}'.format(self.config))
+                sync_check(self.config, self.subscriber)
+
+            # asks the global db to synchronize with operational trees on the
+            # local db
+            if self.operational:
+                logging.info('global db to sync with operational trees: {}'.format(self.config))
+                ask_global_db(self.operational, self.subscriber)
+
             while True:
                 try:
                     msg = yield self.client.read_message()
@@ -659,7 +653,7 @@ class _SubscriberClient(object):
 
 def main():
 
-    global mhost, mport, sync_path, server_as_subscriber, plugins
+    global mhost, mport, sync_path, server_as_subscriber, server_tega_id, plugins
 
     logging.basicConfig(
             level=logging.DEBUG,
@@ -675,11 +669,10 @@ def main():
             default=None)
     parser.add_argument("-P", "--mport", help="Global idb REST API server port",
                         type=int, default=None)
-    parser.add_argument("-S", "--syncpath",
-            help="Root path to be synchronized with", type=str, default=None)
-    parser.add_argument("-s", "--sync",
-            help="Synchronize with global idb at start up",
-            action='store_true')
+    parser.add_argument("-C", "--config",
+            help="Root object IDs of config trees", type=str, nargs='*', default=None)
+    parser.add_argument("-O", "--operational",
+            help="Root object IDs of operational trees", type=str, nargs='*', default=None)
     parser.add_argument("-t", "--tegaid", help="tega ID", type=str,
             default=str(uuid.uuid4()))
     parser.add_argument("-e", "--extensions", help="Directory of tega plugins",
@@ -689,16 +682,13 @@ def main():
 
     args = parser.parse_args()
 
-    if args.syncpath:
-        role = 'client'
-    else:
-        role = 'server'
-    print('{}\ntega_id: {}, sync: {}\n'.format(LOGO, args.tegaid, role))
+    server_tega_id = args.tegaid
+    print('{}\n\ntega_id: {},config: {}\n'.format(LOGO, server_tega_id,
+        args.config))
 
-    if args.syncpath:
-        sync_path = args.syncpath
+    if args.config:
         if not args.mhost or not args.mport:
-            print('All --mhost, --mport and --syncpath options MUST be specified')
+            print('All --mhost, --mport and --config options MUST be specified')
             sys.exit(1)
         else:
             mhost = args.mhost
@@ -706,7 +696,7 @@ def main():
 
     # idb initialization
     print(args)
-    tega.idb.start(args.datadir, args.tegaid, args.maxlen)  # idb start
+    tega.idb.start(args.datadir, server_tega_id, args.maxlen)  # idb start
 
     # Reloads previous logs from tega db file
     logging.info('Reloading log from {}...'.format(args.datadir))
@@ -727,7 +717,6 @@ def main():
     application = tornado.web.Application([
         (r'/_pubsub', PubSubHandler),
         (r'/_rpc', RpcHandler),
-        (r'/_(sync_[a-z]+)', SyncApiHandler),
         (r'/_(.*)', ManagementRestApiHandler),
         (r'(.*)', RestApiHandler)
     ])
@@ -736,20 +725,10 @@ def main():
         tornado.ioloop.PeriodicCallback(transaction_gc,
                 TRANSACTION_GC_PERIOD * 1000).start()
         
-        if args.mhost and args.mport and args.syncpath:
-            tega_id = args.tegaid
+        if args.mhost and args.mport and args.config:
             server_as_subscriber = _SubscriberClient(
-                    args.mhost, args.mport, args.syncpath, tega_id)
-            if args.sync:
-                while (True):
-                    try:
-                        _sync_request(args.mhost, args.mport, args.syncpath)
-                        break
-                    except ConnectionRefusedError:
-                        print('global idb does not seem to be running...')
-                        time.sleep(CONNECT_RETRY_TIMER)
-                print('sync confirmed')
-
+                    args.mhost, args.mport, args.config, args.operational,
+                    server_tega_id)
             tornado.ioloop.IOLoop.current().run_sync(
                     server_as_subscriber.subscriber_loop)
         else:

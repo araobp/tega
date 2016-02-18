@@ -25,7 +25,7 @@ readline.set_history_length(HISTORY_LENGTH)
 operations = '|'.join(['get', 'geta', 'put', 'pute', 'delete', 
     'begin', 'cancel', 'commit', 'subscribe', 'unsubscribe', 'publish'])
 cmd_pattern = re.compile('^(' + operations +
-        ')\s+([\(\)\[\]=,\.\w\*]+)\s*(-*\d*)$|^(rollback)\s+([\w]+)\s+(-\d*)$')
+        ')\s+([\(\)\[\]=\-,\.\w\*]+)\s*(-*\d*)$|^(rollback)\s+([\w\-]+)\s+(-\d*)$')
 rpc_pattern = re.compile('^[\.\w]+\([\w\s\'\"\,\.\/=-]*\)$')
 methods = {'get': OPE.GET.name, 'geta': OPE.GET.name,
     'put': OPE.PUT.name, 'delete': OPE.DELETE.name}
@@ -40,7 +40,6 @@ clear                   empty the database
 roots                   list root object IDs
 old                     list old root object IDs
 sync                    synchronize with global idb 
-log                     show the log cache
 rollback    M     M     rollback a specific root to a previous version
 ss                      take a snapshot
 plugins                 show plugins attached to the tega db
@@ -118,7 +117,7 @@ def process_cmd(tornado_loop=False):
     elif cmd == 'id':
         print(driver.tega_id)
     elif cmd in ('clear', 'roots', 'old',
-            'sync', 'log', 'channels', 'subscribers', 'ids',
+            'sync', 'channels', 'subscribers', 'ids',
             'global', 'forwarders', 'plugins'):
         status, reason, data = getattr(driver, cmd)()
         if data:

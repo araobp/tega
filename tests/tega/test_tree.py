@@ -331,19 +331,5 @@ class TestSequence(unittest.TestCase):
         with self.assertRaises(AttributeError):
             r2.a = 3
 
-    def test_dimensional(self):
-        r = tega.tree.Cont('r')
-        r.a[0] = 'Alice' 
-        r.a[1] = 'Bob' 
-        iter_ = iter(r.a)
-        self.assertEqual('Alice', r.a[next(iter_)])
-        self.assertEqual('Bob', r.a[next(iter_)])
-        with self.assertRaises(StopIteration):
-            next(iter_)
-        del r.a[1]
-        r.freeze_()
-        with self.assertRaises(AttributeError):
-            v = r.a[1]
-
 if __name__ == '__main__':
     unittest.main(verbosity=2)

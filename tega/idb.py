@@ -1,7 +1,7 @@
 from tega.subscriber import SCOPE
 from tega.messaging import request, REQUEST_TYPE
 from tega.tree import Cont, RPC
-from tega.util import path2qname, qname2path, dict2cont, subtree, deserialize, copy_and_childref, align_vector, newest_commit_log
+from tega.util import path2qname, qname2path, dict2cont, subtree, deserialize, copy_and_childref, align_vector, commit_log_number, readline_reverse
 
 import copy
 import collections
@@ -27,7 +27,6 @@ _idb = {}  # in-memory DB
 _old_roots = {}  # old roots at every version
 _log_dir = None  # Log directory
 _log_fd = None  # Log file descriptor
-_log_cache = []  # log cache
 _ephemeral_nodes = {}  # holder of ephemeral nodes
 
 server_tega_id = None  # Server's tega ID
@@ -38,6 +37,9 @@ subscribers = {}  # subscribers subscribing channels
 subscribe_forwarders = set()
 old_roots_len = OLD_ROOTS_LEN  # The max number of old roots kept in idb 
 
+def _commit_log_filename(tega_id, num):
+    return 'log.{}.{}'.format(tega_id, str(num))
+
 class OPE(Enum):
     '''
     CRUD operations
@@ -47,14 +49,7 @@ class OPE(Enum):
     PUT = 3
     DELETE = 4 
     SS = 5
-
-class POLICY(Enum):
-    '''
-    Conflict resolution policy
-    '''
-    WIN = '+'
-    LOOSE = '-'
-    RAISE_EXCEPTION = '!'
+    ROLLBACK = 6
 
 class NonLocalRPC(Exception):
     '''
@@ -76,9 +71,9 @@ def start(data_dir, tega_id, maxlen=OLD_ROOTS_LEN):
     global server_tega_id
     server_tega_id = tega_id
     _log_dir = os.path.join(os.path.expanduser(data_dir))
-    seq_no = newest_commit_log(server_tega_id, _log_dir)
-    log_file_name = 'log.{}.{}'.format(server_tega_id, seq_no)
-    log_file = os.path.join(_log_dir, log_file_name)
+    num = commit_log_number(server_tega_id, _log_dir)
+    filename = _commit_log_filename(server_tega_id, num)
+    log_file = os.path.join(_log_dir, filename)
     _log_fd = open(log_file, 'a+')  # append-only file
     old_roots_len = maxlen
 
@@ -104,12 +99,23 @@ def clear():
     '''
     Empties tega-db file and in-memory DB
     '''
-    global _idb, _old_roots, _log_cache
-    _log_fd.seek(0)
-    _log_fd.truncate()
+    global _log_fd, _log_dir, _idb, _old_roots, server_tega_id
+
+    # Clears idb
     _idb = {}
     _old_roots = {}
-    _log_cache = []
+
+    # Removes commit log files
+    _log_fd.close()
+    max_ = commit_log_number(server_tega_id, _log_dir)
+    for i in range(0, max_ + 1):
+        log_file = os.path.join(_log_dir, _commit_log_filename(server_tega_id, i))
+        if os.path.exists(log_file):
+            os.remove(log_file)
+
+    # Reopens an empty commit log file
+    log_file = os.path.join(_log_dir, _commit_log_filename(server_tega_id, 0))
+    _log_fd = open(log_file, 'a+')  # append-onlyfile
 
 def subscribe(subscriber, path, scope=SCOPE.LOCAL):
     '''
@@ -127,7 +133,7 @@ def subscribe(subscriber, path, scope=SCOPE.LOCAL):
     else:
         if not path in subscribers[subscriber]:
             subscribers[subscriber].append(path)
-    if scope == SCOPE.GLOBAL or scope == SCOPE.SYNC:
+    if scope == SCOPE.GLOBAL:
         global_channels[path] = scope
         if not subscriber in subscribe_forwarders:  # Not from a forwarder.
             for _subscriber in subscribe_forwarders:
@@ -270,21 +276,35 @@ def is_subscribe_forwarder(tega_id):
             return True
     return False
 
-def log_entry(ope, path, tega_id, instance):
+def log_entry(ope, path, tega_id, instance, backto=None):
     '''
     Log entry
     '''
-    return dict(ope=ope, path=path, tega_id=tega_id, instance=instance)
+    if backto:
+        return dict(ope=ope, path=path, tega_id=tega_id, instance=instance,
+                backto=backto)
+    else:
+        return dict(ope=ope, path=path, tega_id=tega_id, instance=instance)
 
 def old_roots_deque():
     return collections.deque(maxlen=old_roots_len)
+
+def _notify_broadcast(notify_batch, subscriber=None):
+    '''
+    Notifies CRUD operations in a batch to subscribers
+
+    notify_batch: [subscriber, [log_entory, ...]]
+    '''
+    for _subscriber, notifications in notify_batch.items():
+        if subscriber != _subscriber:
+            _subscriber.on_notify(notifications)
 
 class tx:
     '''
     tega-db transaction 
     '''
 
-    def __init__(self, tega_id=None, subscriber=None, policy=POLICY.RAISE_EXCEPTION):
+    def __init__(self, tega_id=None, subscriber=None):
         '''
         Note: subscriber includes tega_id. The user of this class w/o
         a subscriber client needs to set tega_id.
@@ -299,7 +319,6 @@ class tx:
             self.tega_id = self.subscriber.tega_id
         else:
             self.tega_id = tega_id
-        self.policy = policy
 
     def __enter__(self):
         return self
@@ -412,9 +431,7 @@ class tx:
             crud[0](*crud[1:])
 
         if len(self.commit_queue) > 0:
-            finish_marker = COMMIT_FINISH_MARKER+'{}:{}'.format(time.time(),
-                                                          self.policy.value)
-            _log_cache.append(COMMIT_START_MARKER)
+            finish_marker = COMMIT_FINISH_MARKER+'{}'.format(time.time())
             if write_log:  # Writes log
                 if _log_fd:
                     _log_fd.write(COMMIT_START_MARKER+'\n')  # commit start
@@ -424,10 +441,6 @@ class tx:
                     _log_fd.write(finish_marker+'\n')  # commit finish marker
                     _log_fd.flush()
                     os.fsync(_log_fd)
-
-            # log cache update
-            _log_cache.extend(self.commit_queue)
-            _log_cache.append(finish_marker)
 
         # old roots cache update
         for root_oid in self.candidate:
@@ -454,7 +467,9 @@ class tx:
                 _old_roots[root_oid].append((prev_version, old_root))
 
         # Notifies the commited transaction to subscribers
-        self._notify_commit(self.subscriber)
+        _notify_broadcast(notify_batch=self.notify_batch,
+                subscriber=self.subscriber)
+        self.notify_batch = {}
 
     def _enqueue_commit(self, ope, path, tega_id, instance, ephemeral):
         '''
@@ -666,15 +681,6 @@ class tx:
 
                         self.notify_batch[subscriber].append(log)
 
-    def _notify_commit(self, subscriber=None):
-        '''
-        Notifies CRUD operations in a batch to subscribers
-        '''
-        for _subscriber, notifications in self.notify_batch.items():
-            if subscriber != _subscriber:
-                _subscriber.on_notify(notifications)
-
-        self.notify_batch = {}
 
 def get(path, version=None):
     '''
@@ -758,10 +764,12 @@ def old():
         old_roots.append({k: version})
     return old_roots
 
-def rollback(root_oid, backto, write_log=True):
+def rollback(tega_id, root_oid, backto, subscriber=None, write_log=True):
     '''
     Rollbacks a specific root to a previous version
     '''
+    next_version = _idb[root_oid]['_version'] + 1
+
     roots = _old_roots[root_oid]
     end = len(roots)
 
@@ -776,22 +784,28 @@ def rollback(root_oid, backto, write_log=True):
     version = pair[0]
     root = pair[1]
     align_vector(root)
+    root._setattr('_version', next_version)
     _idb[root_oid] = root
-    marker_rollback = '{} {}'.format(str(backto), root_oid)
+    marker_rollback = '{} {} {}'.format(str(backto), tega_id, root_oid)
     if _log_fd and write_log:
         _log_fd.write(marker_rollback+'\n')
         _log_fd.flush()
         os.fsync(_log_fd)
-    _log_cache.append(marker_rollback)
 
-def _timestamp_policy(line):
+    log = log_entry(ope=OPE.ROLLBACK.name, path=root_oid, tega_id=tega_id,
+            instance=None, backto=backto)
+    notify_batch = {}
+    for path_, subscriber in channels.items():
+        if path_.split('.')[0] == root_oid:
+            for s in subscribers:
+                notify_batch[s] = [log]
+    _notify_broadcast(notify_batch=notify_batch, subscriber=subscriber)
+
+def _timestamp(line):
     '''
-    Returns timestamp and policy.
+    Returns timestamp.
     '''
-    timestamp_policy = line.lstrip(COMMIT_FINISH_MARKER).rstrip('\n').split(':')
-    timestamp = timestamp_policy[0]
-    policy = timestamp_policy[1]
-    return (timestamp, policy)
+    return line.lstrip(COMMIT_FINISH_MARKER).rstrip('\n')
     
 def reload_log():
     '''
@@ -805,10 +819,10 @@ def reload_log():
         line = line.rstrip('\n')
         if line.startswith(ROLLBACK_MARKER):
             args = line.split(' ')
-            rollback(args[1], int(args[0]), write_log=False)
+            rollback(args[1], args[2], int(args[0]), write_log=False)
         elif line.startswith(COMMIT_FINISH_MARKER) and len(multi) > 0:
-            timestamp, policy = _timestamp_policy(line)
-            t = tx(policy=POLICY(policy))
+            timestamp = _timestamp(line)
+            t = tx()
             for crud in multi:
                 ope = crud[0]
                 if ope == OPE.PUT:
@@ -823,9 +837,8 @@ def reload_log():
             del multi[:]
         elif line.startswith(COMMIT_FINISH_MARKER):
             pass
-        # TODO: the block below is to be removed.
         elif line.startswith(COMMIT_START_MARKER) or line.startswith(SYNC_CONFIRMED_MARKER):
-            _log_cache.append(line)
+            pass
         else:
             log = eval(line)
             ope = log['ope']
@@ -845,6 +858,96 @@ def reload_log():
                 root = deserialize(instance)
                 _idb[root_oid] = root
 
+def loglist_for_sync(root_oid, version):
+    '''
+    Accumulates log entries until the version.
+
+    log.global.0       log.global.l       log.global.n
+    +------------+     +------------+     +------------+ ^
+    |            |     |    SS      |     |    SS      | |
+    |            |     |------------|     |            | |
+    |            |     |            | ^   |            | |
+    |            |     |            | |   |            | |
+    +------------+     +------------+ |   +------------+ |
+    '''
+    multi = []
+    notifications = []
+    if version < 0:
+        version = -1
+    try:
+        version_ = _idb[root_oid]['_version']
+    except KeyError:
+        return multi
+    if version_ <= version:
+        return multi 
+
+    max_ = commit_log_number(server_tega_id, _log_dir)
+
+    continue_ = True
+    begin = False
+    match = False
+
+    while continue_ and max_ >= 0:
+        filename = _commit_log_filename(server_tega_id, max_)
+        log_file = os.path.join(_log_dir, filename)
+        max_ -= 1
+
+        with open(log_file, 'r') as fd:
+            g = readline_reverse(fd)
+            while True:
+                try:
+                    line = next(g).rstrip('\n')
+                except StopIteration:
+                    break
+
+                if line == '':
+                    pass
+                elif line.startswith(COMMIT_FINISH_MARKER):
+                    begin = True
+                elif line.startswith(COMMIT_START_MARKER):
+                    begin = False
+                    if match:
+                        version_ -= 1
+                        match = False
+                        multi.insert(0, notifications)
+                        notifications = []
+                    if version_ <= version:
+                        continue_ = False
+                        break
+                elif line.startswith(ROLLBACK_MARKER):
+                    args = line.split(' ')
+                    root_oid_ = args[2]
+                    if root_oid_ == root_oid:
+                        backto = args[0]
+                        tega_id = args[1]
+                        log = log_entry(ope=OPE.ROLLBACK.name, path=root_oid,
+                                tega_id=tega_id, instance=None,
+                                backto=int(backto))
+                        if notifications:
+                            multi.insert(0, notifications)
+                        notifications = [log]
+                        multi.insert(0, notifications)
+                        notifications = []
+                        version_ -= 1
+                        if version_ <= version:
+                            continue_ = False
+                            break
+                elif begin:
+                    log = eval(line)
+                    ope = log['ope']
+                    path = log['path']
+                    tega_id = log['tega_id']
+                    instance = log['instance']
+                    if ope == OPE.SS.name:
+                        pass
+                    elif path.split('.')[0] == root_oid:
+                        match = True
+                        log = log_entry(ope=ope, path=path, tega_id=tega_id,
+                                instance=instance)
+                        notifications.insert(0, log)
+
+    return multi 
+
 def crud_batch(notifications, subscriber=None):
     '''
     CRUD operation in a batch.
@@ -853,26 +956,34 @@ def crud_batch(notifications, subscriber=None):
         for crud in notifications:
             ope = crud['ope']
             path = crud['path']
-            instance = subtree(path, crud['instance'])
             tega_id = crud['tega_id']
-            if ope == 'PUT':
+            if ope == OPE.PUT.name:
+                instance = subtree(path, crud['instance'])
                 t.put(instance, tega_id=tega_id, deepcopy=False)
-            elif ope == 'DELETE':
-                t.delete(path2qname(path), tega_id=tega_id)
+            elif ope == OPE.DELETE.name:
+                t.delete(path, tega_id=tega_id)
+            elif ope == OPE.ROLLBACK.name:
+                backto = crud['backto']
+                rollback(tega_id, path, backto, subscriber=subscriber)
 
-def sync_check(sync_path, digest):
+def sync(root_oid, version, subscriber):
     '''
-    Checks if global idb and local idb are synchronized.
+    Leader-Follower synchronization on the root_oid.
     '''
-    _commiters = commiters(sync_path)
-    _digest = commiters_hash(_commiters)
+    global _idb
     logging.debug(
-            'sync_check\n digest: {}\n _commiters: {}\n _digest: {}'.
-            format(digest, _commiters, _digest))
-    if digest == _digest:
-        return True
-    else:
-        return False
+            'sync -- root_oid: {}, version: {}'.format(root_oid, version))
+    version_ = -1
+
+    if root_oid in _idb:
+        version_ = _idb[root_oid]['_version']
+
+    if version_ > version:  # out of sync
+        multi = loglist_for_sync(root_oid, version)
+        for notifications in multi:
+            subscriber.on_notify(notifications)
+    else:  # in sync
+        pass
 
 def _transactions2notifications(transactions):
     '''
@@ -888,120 +999,24 @@ def _transactions2notifications(transactions):
         accumulated.extend(batch[1])
     return accumulated
 
-def conflict_resolution(subscriber, sync_path, transactions):
-    '''
-    Compares pending transactions between global idb and local idb, then
-    detects and filters out collisions.
-
-    This method raises ValueError and terminates abruptly when detected
-    collisions cannot be resolved because of conflicting policies between
-    global idb and local idb.
-    '''
-    logging.debug('conflict resolution -\n sync_path: {}\n transactions: {}'.
-            format(sync_path, transactions))
-
-    # Pending transactions at Client 
-    transactions = _transactions_within_scope(sync_path, transactions)
-    # Pending transactions at Server 
-    confirmed, _transactions = transactions_since_last_sync(sync_path)
-    _transactions = _transactions_within_scope(sync_path, _transactions)
-
-    # Transactions to be filtered out
-    _t_remove = set()
-    t_remove = set()
-
-    # Detects conflicts and filters out collisions.
-    for _t in _transactions:  # each transaction at Server
-        _p = [_l['path'] for _l in _t[1]]  # each log in notifications
-        _P = set(_p)  # union of paths
-        for t in transactions:  # each transaction at Client
-            p = [l['path'] for l in t[1]]  # each log in notifications
-            P = set(p)  # union of paths
-            _tp = _t[0]  # policy at Server
-            tp = t[0]  # policy at Client
-
-            if len(_P&P) == 0:  # intersection is null: no collisions detected
-                # _t and t pass
-                pass
-            elif _tp == POLICY.RAISE_EXCEPTION:
-                raise ValueError()
-            elif tp == POLICY.RAISE_EXCEPTION:
-                raise ValueError()
-            elif _tp == POLICY.WIN and tp == POLICY.LOOSE:
-                # _t passes
-                t_remove.add(t)
-            elif _tp == POLICY.LOOSE and tp == POLICY.WIN:
-                # t passes
-                _t_remove.add(_t)
-            elif _tp == POLICY.LOOSE and tp == POLICY.LOOSE:
-                t_remove.add(t)
-                _t_remove.add(_t)
-
-    # Conflict resolution by rolling back to a previous version and commit
-    # the filtered transactions again.
-    if len(_t_remove) > 0:
-        for _t in copy.copy(_transactions):
-            if _t in _t_remove:
-                _transactions.remove(_t)
-        root_oid = sync_path.split('.')[0]
-        version = _get_last_sync_marker()['version']
-        rollback(root_oid, version, write_log=True)
-        _notifications = _transactions2notifications(_transactions)
-        crud_batch(_notifications, subscriber=subscriber)
-    if (len(t_remove)) > 0:
-        for t in copy.copy(transactions):
-            if t in t_remove:
-                transactions.remove(t)
-    notifications = _transactions2notifications(transactions)
-    crud_batch(notifications, subscriber=subscriber)
-
-    return _transactions
-
-def get_log_cache():
-    '''
-    Returns log cache
-    '''
-    return _log_cache
-
-def sync_confirmed(url, sync_path, version, sync_ver):
-    '''
-    Writes "sync confirmed" record on tega DB
-    '''
-    confirmed = dict(url=url, sync_path=sync_path, version=version, sync_ver=sync_ver)
-    marker_confirmed = '{}{}'.format(SYNC_CONFIRMED_MARKER, confirmed)
-    _log_fd.write(marker_confirmed+'\n')
-    _log_fd.flush()
-    os.fsync(_log_fd)
-    _log_cache.append(marker_confirmed)
-    logging.debug('sync confirmed - \n{}\n'.format(json.dumps(marker_confirmed)))
-
-def sync_confirmed_server(tega_id, sync_path, version, sync_ver):
-    '''
-    Writes "sync confirmed" record on tega DB
-    '''
-    confirmed = dict(tega_id=tega_id, sync_path=sync_path, version=version, sync_ver=sync_ver)
-    marker_confirmed = '{}{}'.format(SYNC_CONFIRMED_MARKER, confirmed)
-    _log_fd.write(marker_confirmed+'\n')
-    _log_fd.flush()
-    os.fsync(_log_fd)
-    _log_cache.append(marker_confirmed)
-    logging.debug('sync confirmed - \n{}\n'.format(json.dumps(marker_confirmed)))
-
 def save_snapshot(tega_id):
     '''
     Take a snapshot of _idb and saves it to the hard disk.
     '''
-    seq_no = newest_commit_log(server_tega_id, _log_dir) + 1  # Increments the log seq number
+    global _log_fd
     _idb_snapshot = {}
     for root_oid in _idb:
         _idb_snapshot[root_oid] = _idb[root_oid].serialize_(internal=True,
                 serialize_ephemeral=False)
 
-    log_file_name = 'log.{}.{}'.format(server_tega_id, seq_no)
-    log_file = os.path.join(_log_dir, log_file_name)
+    num = commit_log_number(server_tega_id, _log_dir)
+    filename = _commit_log_filename(server_tega_id, num+1)
+    log_file = os.path.join(_log_dir, filename)
+    if _log_fd:
+        _log_fd.close()
     _log_fd = open(log_file, 'a+')  # append-only file
 
-    finish_marker = COMMIT_FINISH_MARKER+'{}:{}'.format(time.time(), POLICY.RAISE_EXCEPTION.value)  # TODO: is raise_exception OK?
+    finish_marker = COMMIT_FINISH_MARKER+'{}'.format(time.time())  # TODO: is raise_exception OK?
 
     _log_fd.write(COMMIT_START_MARKER+'\n')  # commit start
     for root_oid, instance in _idb_snapshot.items():
@@ -1026,168 +1041,6 @@ def _build_scope_matcher(sync_path):
             return False
 
     return match
-
-def _index_last_sync(sync_path=None):
-    '''
-    _log_cache
-    -------------- index
-    sync_confirmed   0
-    record           1 <== _index_last_sync()
-    record           2
-    --------------
-    '''
-    index = -1
-    confirmed = None
-    len_ = len(_log_cache) 
-    if len_ > 0:
-        index = len_ - 1
-        for record in reversed(_log_cache):
-            if type(record) == str and record.startswith(SYNC_CONFIRMED_MARKER):
-                confirmed = eval(record.lstrip(SYNC_CONFIRMED_MARKER))
-                if sync_path:
-                    if confirmed['sync_path'] == sync_path:
-                        break
-                    else:
-                        pass
-                else:
-                    break
-            elif index == 0:
-                break
-            index -= 1
-    return (confirmed, index)
-
-def get_sync_confirmed(sync_path):
-    '''
-    Returns a sync confirmed marker since last sync.
-    '''
-    confirmed, index = _index_last_sync(sync_path)
-    return confirmed
-
-def _get_last_sync_marker(sync_path=None):
-    '''
-    _log_cache
-    -------------- index
-    sync_confirmed   0 <== _get_last_sync_marker()
-    record           1
-    record           2
-    --------------
-    '''
-    len_ = len(_log_cache)
-    if len_ > 0:
-        for record in reversed(_log_cache):
-            if type(record) == str and record.startswith(SYNC_CONFIRMED_MARKER):
-                confirmed = eval(record.lstrip(SYNC_CONFIRMED_MARKER))
-                if sync_path:
-                    if confirmed['sync_path'] == sync_path:
-                        return confirmed
-                    else:
-                        pass
-                else:
-                    return confirmed
-    return None 
-
-def _gen_transaction_since_last_sync(index):
-    '''
-    Returns a Python generator to yield a list of log per transaction.
-    '''
-    if index < 0:
-        yield None
-    else:
-        _tx = []
-        for record in _log_cache[index:]:
-            if type(record) == dict:
-                _tx.append(record)
-            elif record.startswith(COMMIT_FINISH_MARKER):
-                timestamp, policy = _timestamp_policy(record)
-                yield [policy, _tx] 
-                _tx = []
-            else:
-                pass
-
-def _transactions_within_scope(sync_path, transactions):
-    '''
-    Removes transactions out of scope.
-    '''
-    match = _build_scope_matcher(sync_path)
-    notifications = []
-    trans = []
-    for transaction in transactions:
-        for notification in transaction[1]:
-            if match(notification['path']):
-                notifications.append(notification)
-        if (len(notifications) != 0):
-            trans.append([transaction[0], notifications])
-            notifications = []
-    return trans
-
-def transactions_since_last_sync(sync_path=None):
-    '''
-    Returns a list of transactions since last sync in the form of:
-    [[transaction], [transaction],...]
-
-    TODO: multiple sync_path support.
-    '''
-    transactions = []
-    confirmed, index = _index_last_sync(sync_path)
-    for _policy_tx in _gen_transaction_since_last_sync(index):
-        if _policy_tx:
-            transactions.append(_policy_tx)
-        else:
-            break
-    return (confirmed, transactions)
-
-def _gen_log_cache_since_last_sync(index):
-    '''
-    _log_cache
-    -------------- index
-    sync_confirmed   0
-    record           1 <== _index_last_sync()
-    record           2
-    --------------
-    yield _log_cache[1], and then _log_cache[2].
-
-    Note: this function returns a Python generator to yield CRUD operations.
-
-    '''
-    if index < 0:
-        yield None
-    else: 
-        for record in _log_cache[index:]:
-            if type(record) == dict:
-                yield record
-
-def commiters(sync_path, version_since=-1):
-    '''
-    Returns a list of commiters since last sync on the sync_path
-    in reversed order, for conflict detection.
-
-    '''
-    commiters = []
-
-    match = _build_scope_matcher(sync_path)
-
-    confirmed, index = _index_last_sync(sync_path)
-    for crud in _gen_log_cache_since_last_sync(index):
-        if crud:
-            _path = crud['path']
-            _path_dot = _path + '.'
-
-            if match(_path):
-                commiters.append(crud['tega_id'])
-        else:
-            break
-    return commiters 
-
-def commiters_hash(commiters):
-    '''
-    Returns a digest(sha256) of a list of commiters.
-    '''
-    hash_list = [hashlib.sha256(tega_id.encode('utf-8')).hexdigest() for tega_id in commiters]
-
-    digest_concat = ''
-    for digest in hash_list:
-        digest_concat += digest
-    return hashlib.sha256(digest_concat.encode('utf-8')).hexdigest()
 
 def publish(channel, tega_id, message, subscriber):
     '''
@@ -1228,7 +1081,7 @@ def rpc2(path, args=None, kwargs=None, tega_id=None):
     This method is called by server.py
     '''
     try:
-        raise gen.Return(rpc(path, args, kwargs))
+        return rpc(path, args, kwargs)
     except NonLocalRPC:
         if tega_id:
             subscriber = get_subscriber_for_local_db(path)
@@ -1239,7 +1092,7 @@ def rpc2(path, args=None, kwargs=None, tega_id=None):
                                        path=path,
                                        args=args,
                                        kwargs=kwargs)
-                raise gen.Return(result)
+                return result
             except gen.TimeoutError:
                 raise
         else:
@@ -1253,7 +1106,7 @@ def rpc2(path, args=None, kwargs=None, tega_id=None):
                                    path=path,
                                    args=args,
                                    kwargs=kwargs)
-            raise gen.Return(result)
+            return result
         except gen.TimeoutError:
             raise
 

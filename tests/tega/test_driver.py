@@ -54,10 +54,8 @@ class TestSequence(unittest.TestCase):
         a.b.c = 1
         TestSequence.driver_g.put(a.b.c)
         TestSequence.driver_g.clear()
-        status, reason, body = TestSequence.driver_g.log()
-        self.assertEqual(200, status)
-        self.assertEqual('OK', reason)
-        self.assertEqual(0, len(body))
+        status, reason, body = TestSequence.driver_g.roots()
+        self.assertFalse(body)
 
     def test_log(self):
 
@@ -105,46 +103,6 @@ class TestSequence(unittest.TestCase):
                 self.assertEqual([0], old_['x'])
             else:
                 raise Exception('old')
-
-    def test_sync(self):
-
-        import tega.tree
-        a = tega.tree.Cont('a')
-        x = tega.tree.Cont('x')
-
-        a.b.c = 1
-        x.y.z = 2
-        TestSequence.driver_g.put(a.b.c)
-        TestSequence.driver_g.put(x.y.z)
-
-        TestSequence.driver_l1.sync()
-        log = TestSequence.driver_l1.log()
-        self.assertEqual((200, 'OK', []), log)
-
-        inventory = tega.tree.Cont('inventory')
-        inventory.ne1.name = 'NE1'
-        inventory.ne1.address = '10.10.10.10/24'
-        inventory.ne1.location = 'Tokyo'
-        inventory.ne2.name = 'NE2'
-        inventory.ne2.address = '10.10.10.11/24'
-        inventory.ne2.location = 'Berlin'
-
-        # Checks if auto-sync has been performed.
-        TestSequence.driver_g.put(inventory.ne1)
-        def _extract_crud(log):
-            iter_ = iter(log)
-            while True:
-                l = next(iter_)
-                if type(l) == dict:
-                    yield l
-        def _assert(self, l, path, instance):
-            self.assertEqual(path, l['path'])
-            self.assertEqual(instance, l['instance'])
-        time.sleep(1)
-        status, reason, log = TestSequence.driver_l1.log()
-        iter_ = _extract_crud(log)
-        _assert(self, next(iter_), 'inventory.ne1', {'name': 'NE1', 'address': '10.10.10.10/24', 'location': 'Tokyo'})
-        self.assertRaises(StopIteration, next, iter_)
 
     def test_rollback(self):
 
