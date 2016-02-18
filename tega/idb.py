@@ -133,7 +133,7 @@ def subscribe(subscriber, path, scope=SCOPE.LOCAL):
     else:
         if not path in subscribers[subscriber]:
             subscribers[subscriber].append(path)
-    if scope == SCOPE.GLOBAL or scope == SCOPE.SYNC:
+    if scope == SCOPE.GLOBAL:
         global_channels[path] = scope
         if not subscriber in subscribe_forwarders:  # Not from a forwarder.
             for _subscriber in subscribe_forwarders:

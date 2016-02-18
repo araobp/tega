@@ -14,7 +14,6 @@ class SCOPE(Enum):
     '''
     LOCAL = 'local'    # SUB to local idb (not to global idb)
     GLOBAL = 'global'  # SUB from a plugin to global idb via local idb 
-    SYNC = 'sync'      # 'global' + global idb subscribes back to local idb 
 
 class Subscriber(object):
 
@@ -28,6 +27,10 @@ class Subscriber(object):
         tega ID of this plugin.
         '''
         return self._tega_id
+
+    @tega_id.setter
+    def tega_id(self, value):
+        self._tega_id = value
 
     @property
     def scope(self):

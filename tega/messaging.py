@@ -30,9 +30,9 @@ def build_parser(direction):
         TEGA-websocket-message  = Session / SessionAck / Subscribe /
                                   Unsubscribe / Publish / Notify / Message /
                                   Request / Response
-        TEGA-scope              = "global" / "local" / "sync"
+        TEGA-scope              = "global" / "local"
         Session                 = "SESSION" SP tega_id SP TEGA-scope
-        SessionAck              = "SESSIONACK"
+        SessionAck              = "SESSIONACK" SP tega_id
         Subscribe               = "SUBSCRIBE" SP path SP TEGA-scope
         Unsubscribe             = "UNSUBSCRIBE" SP path
         Notify                  = "NOTIFY" CRLF notifications
