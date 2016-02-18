@@ -171,6 +171,8 @@ func (ope *Operation) wsReader() {
 			cmd := line[0]
 
 			if cmd == SESSIONACK {
+				remote_tega_id := line[1]
+				log.Printf("SESSIONACK received from %s", remote_tega_id)
 				ope.subscriber.OnInit()
 				continue
 			}
