@@ -265,6 +265,36 @@ class TestSequence(unittest.TestCase):
         TestSequence.driver_g.commit()
         self.assertEqual('Paris', TestSequence.driver_g.get('a.b.c'))
 
+    def test_idb_edges(self):
+        r = tega.tree.Cont('r')
+        r.a.x = 1
+        r.a.y = 2
+        r.a.z = 3
+        r.b.x = 4
+        r.b.y = 5
+        r.b.z = 6
+        txid = TestSequence.driver_g.begin()
+        TestSequence.driver_g.put(r.a)
+        TestSequence.driver_g.commit()
+        txid = TestSequence.driver_g.begin()
+        TestSequence.driver_g.put(r.b)
+        TestSequence.driver_g.commit()
+        status, reason, data = TestSequence.driver_g.edges()
+
+        data_compared = [['r(1)', 'r.b(1)'], ['r.b(1)', 'r(1)'], ['r.b(1)',
+            'r.b.z(1)'], ['r.b.z(1)', 'r.b(1)'], ['r.b(1)', 'r.b.y(1)'],
+            ['r.b.y(1)', 'r.b(1)'], ['r.b(1)', 'r.b.x(1)'], ['r.b.x(1)',
+                'r.b(1)'], ['r(1)', 'r.a(0)'], ['r.a(0)', 'r(0)'], ['r.a(0)',
+                    'r.a.z(0)'], ['r.a.z(0)', 'r.a(0)'], ['r.a(0)', 'r.a.y(0)'],
+                ['r.a.y(0)', 'r.a(0)'], ['r.a(0)', 'r.a.x(0)'], ['r.a.x(0)',
+                    'r.a(0)'], ['r(0)', 'r.a(0)'], ['r.a(0)', 'r(0)'],
+                ['r.a(0)', 'r.a.z(0)'], ['r.a.z(0)', 'r.a(0)'], ['r.a(0)',
+                    'r.a.y(0)'], ['r.a.y(0)', 'r.a(0)'], ['r.a(0)', 'r.a.x(0)'],
+                ['r.a.x(0)', 'r.a(0)']]
+        data0 = ['{}-{}'.format(*edge) for edge in data]
+        data1 = ['{}-{}'.format(*edge) for edge in data_compared]
+        self.assertEqual(set(data0), set(data1))
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 

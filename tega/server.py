@@ -213,6 +213,10 @@ class ManagementRestApiHandler(tornado.web.RequestHandler):
                 _plugins[v.tega_id] = v.scope.value
             self.write(json.dumps(_plugins))
             self.set_header('Content-Type', 'application/json')
+        elif cmd == 'edges':
+            data = tega.idb.idb_edges()
+            self.write(json.dumps(data))
+            self.set_header('Content-Type', 'application/json')
 
 class RestApiHandler(tornado.web.RequestHandler):
     '''
