@@ -145,11 +145,33 @@ def align_vector(cont):
     '''
     Aligns references between parents and children
     '''
-    for k,v in cont.items():
+    for k in cont:
         child = cont[k]
         child._setattr('_parent', cont)
         if isinstance(child, Cont):
             align_vector(child)
+
+def _edge(qname, version):
+    return '{}({})'.format('.'.join(qname), version)
+
+def edges(cont):
+    '''
+    Generates edges of a Cont object recursively
+    '''
+    parent_qname = cont.qname_()
+    parent_version = cont['_version']
+    for _, child in cont.items():
+        child_qname = child.qname_()
+        child_version = child._getattr('_version')
+        yield [_edge(parent_qname, parent_version),
+                _edge(child_qname, child_version)]
+        c_parent = child._getattr('_parent')
+        c_parent_qname = c_parent.qname_()
+        c_parent_version = c_parent['_version']
+        yield [_edge(child_qname, child_version),
+                _edge(c_parent_qname, c_parent_version)]
+        if isinstance(child, Cont):
+            yield from edges(child)
 
 def eval_arg(arg):
     '''

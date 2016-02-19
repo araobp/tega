@@ -103,5 +103,23 @@ class TestSequence(unittest.TestCase):
         self.assertEqual(None, args)
         self.assertEqual(None, kwargs)
 
+    def test_edges(self):
+        r = tega.tree.Cont('r')
+        r.a.x = 1
+        r.a.y = 2
+        r.a.z = 3
+        r.b.x = 4
+        r.b.y = 5
+        r.b.z = 6
+        edges = [['r(0)', 'r.a(0)'], ['r.a(0)', 'r(0)'], ['r.a(0)', 'r.a.y(0)'],
+                ['r.a.y(0)', 'r.a(0)'], ['r.a(0)', 'r.a.z(0)'], ['r.a.z(0)',
+                    'r.a(0)'], ['r.a(0)', 'r.a.x(0)'], ['r.a.x(0)', 'r.a(0)'],
+                ['r(0)', 'r.b(0)'], ['r.b(0)', 'r(0)'], ['r.b(0)', 'r.b.y(0)'],
+                ['r.b.y(0)', 'r.b(0)'], ['r.b(0)', 'r.b.z(0)'], ['r.b.z(0)',
+                    'r.b(0)'], ['r.b(0)', 'r.b.x(0)'], ['r.b.x(0)', 'r.b(0)']]
+        data0 = ['{}-{}'.format(*pair) for pair in edges]
+        data1 = ['{}-{}'.format(*edge) for edge in tega.util.edges(r)]
+        self.assertEqual(set(data0), set(data1))
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
