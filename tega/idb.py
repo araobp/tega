@@ -1,7 +1,7 @@
 from tega.subscriber import SCOPE
 from tega.messaging import request, REQUEST_TYPE
 from tega.tree import Cont, RPC
-from tega.util import path2qname, qname2path, dict2cont, subtree, deserialize, copy_and_childref, align_vector, commit_log_number, readline_reverse
+from tega.util import path2qname, qname2path, dict2cont, subtree, deserialize, copy_and_childref, align_vector, commit_log_number, readline_reverse, edges
 
 import copy
 import collections
@@ -1109,4 +1109,16 @@ def rpc2(path, args=None, kwargs=None, tega_id=None):
             return result
         except gen.TimeoutError:
             raise
+
+def idb_edges():
+    '''
+    Returns all edges of Cont objects stored in idb
+    '''
+    all_edges = []
+    for root in _idb.values():
+        all_edges.extend([edge for edge in edges(root)])
+    for v in _old_roots.values():
+        for l in v:
+            all_edges.extend([edge for edge in edges(l[1])])
+    return all_edges
 

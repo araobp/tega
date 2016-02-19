@@ -160,7 +160,7 @@ def edges(cont):
     '''
     parent_qname = cont.qname_()
     parent_version = cont['_version']
-    for _, child in cont.items():
+    for child in cont.values():
         child_qname = child.qname_()
         child_version = child._getattr('_version')
         yield [_edge(parent_qname, parent_version),
