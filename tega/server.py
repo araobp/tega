@@ -683,8 +683,10 @@ def main():
     args = parser.parse_args()
 
     server_tega_id = args.tegaid
-    print('{}\n\ntega_id: {},config: {}\n'.format(LOGO, server_tega_id,
-        args.config))
+    print('{}\n\ntega_id: {}, config: {}, operational: {}\n'.format(LOGO,
+        server_tega_id,
+        args.config,
+        args.operational))
 
     if args.config:
         if not args.mhost or not args.mport:
