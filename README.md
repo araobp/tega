@@ -121,6 +121,7 @@ Note: Tega db is still in alpha release and part of the documentation here has n
 - [tega db format](./doc/tega-db-format.md)
 - [sync path and notifications](./doc/sync_path_and_notifications.md)
 - [subscription scope](./doc/subscription_scope.md)
+- [Guideline](./doc/guideline.md)
 
 ###CRUD operations
 ![operations to the tree](https://docs.google.com/drawings/d/1KOUuiQcosYpfEi4HyF7BYsiiSEW_2rJsZKy9xIPuIZQ/pub?w=600&h=480)
