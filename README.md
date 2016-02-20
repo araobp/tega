@@ -2,6 +2,8 @@
 
 Project start: 2014/8/8
 
+![tega_idb](./doc/output_3_0.png)
+
 MD-SAL-like database for small PCs (incl. Raspberry Pi), written in Python:
 - Tornado-based
 - CRUD/RPC supported
@@ -122,6 +124,7 @@ Note: Tega db is still in alpha release and part of the documentation here has n
 - [sync path and notifications](./doc/sync_path_and_notifications.md)
 - [subscription scope](./doc/subscription_scope.md)
 - [Guideline](./doc/guideline.md)
+- [data visualization by using Jupyter notebook](./doc/jupyter.md)
 
 ###CRUD operations
 ![operations to the tree](https://docs.google.com/drawings/d/1KOUuiQcosYpfEi4HyF7BYsiiSEW_2rJsZKy9xIPuIZQ/pub?w=600&h=480)
