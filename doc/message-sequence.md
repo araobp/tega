@@ -1,3 +1,18 @@
+#REST
+##REQUEST/RESPONSE
+Synchronous
+```
+               [client]                      [server]
+                  |                             |
+  --- api() ----->|                             |
+                  |----- HTTP REQUEST --------->|
+                  |<---- HTTP RESPONSE ---------|
+  <-- return -----|                             |
+                  |                             |
+
+```
+
+#WebSocket
 ##SESSION/SESSIONACK
 Synchronous
 ```
