@@ -36,12 +36,10 @@ x: 2
 - Easy-to-use APIs
 - Concurrenty support with coroutine
 
-Project goal
-------------
+##Project goal
 ![goal](https://docs.google.com/drawings/d/1CVeMUwvrKnbgvjriW0ftwnIMtjiMDlDMCEN0tPTSujs/pub?w=640&h=480)
 
-Use cases
----------
+##Use cases
 - [NLAN](https://github.com/araobp/nlan)
 - BBR remote config
 - OpenWrt remote config
@@ -50,8 +48,7 @@ Use cases
 
 ![Deployment](https://docs.google.com/drawings/d/16z8YFQztsGXWacq8fWyVzs85UTjZqllIs-hGGwav9GY/pub?w=640&h=480)
 
-Try it out
-----------
+##Try it out
 You need to have python3.5 installed on your Debian/Ubuntu Linux.
 
 ```
@@ -87,9 +84,7 @@ $ ./cli
 ```
 
 
-Current architecture
---------------------
-as of 2015/6/14
+##Current architecture
 ```
                            [cli.py]
                                |
@@ -108,10 +103,7 @@ as of 2015/6/14
    commit-log                                       commit-log
 ```
 
-Documentation
--------------
-
-Note: Tega db is still in alpha release and part of the documentation here has not been implemented yet.
+##Documentation
 
 ###Specification
 - [tree structure](./doc/tree.png)
@@ -146,8 +138,16 @@ Note: Tega db is still in alpha release and part of the documentation here has n
 ###RPC routing
 ![rpc routing](https://docs.google.com/drawings/d/1GHHYrF3s0MRypT_SxHkDAT-aFTfCtMh9NkqQrVEtvqo/pub?w=600&h=480)
 
-References
-----------
+##Note
+- Tega db is still in alpha release and part of the documentation here has not been implemented yet.
+- The performance (especially write-performance) of this database is not good:
+-- it is a schema-less database
+--- dynamic typing
+--- nested hash map (hash collisions, rehashing...)
+-- it makes use of for-loop a lot
+-- it saves every commit log onto a storage
+
+##References
 * [OVSDB(RFC7047)](https://tools.ietf.org/html/rfc7047)
 * [OpenDaylight MD-SAL datastore](https://wiki.opendaylight.org/view/OpenDaylight_Controller:MD-SAL:Architecture:DOM_DataStore) 
 * [YANG(RFC6020)](https://tools.ietf.org/html/rfc6020)
