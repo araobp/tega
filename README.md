@@ -117,6 +117,7 @@ Note: Tega db is still in alpha release and part of the documentation here has n
 - [tree structure implemention: Cont class and its attributes](./doc/attributes.md)
 - [YANG-tega comparisons](./doc/yang-tega-comparisons.md)
 - [tega message format](./doc/message-format.md)
+- [tega message sequence diagram](./doc/message-sequence.md)
 - [tega db format](./doc/tega-db-format.md)
 - [sync path and notifications](./doc/sync_path_and_notifications.md)
 - [subscription scope](./doc/subscription_scope.md)
