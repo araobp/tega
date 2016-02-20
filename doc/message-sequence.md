@@ -1,4 +1,5 @@
 ##SESSION/SESSIONACK
+Synchronous
 ```
                [client]                      [server]
                   |                             |
@@ -10,6 +11,7 @@
 ```
 
 ##SUBSCRIBE/UNSUBSCRIBE
+Asynchronous/sequencial
 ```
                [client]                      [server]
                   |                             |
@@ -20,6 +22,7 @@
 
 ```
 ##NOTIFY
+Asynchronous/sequencial
 ```
                [client]                      [server]                      [client]
                   |                             |                             |
@@ -30,6 +33,7 @@
 
 ```
 ##PUBLISH/MESSAGE
+Asynchronous/sequencial
 ```
                [client]                      [server]                    [client] [client]
                   |                             |                             |      |
@@ -40,6 +44,7 @@
 ```
 
 ##ROLLBACK
+Asynchronous/sequencial
 ```
                [client]                      [server]                      [client]
                   |                             |                             |
@@ -51,6 +56,7 @@
 ```
 
 ##REQUEST/RESPONSE
+Synchronous
 ```
                [client]                      [server]
                   |                             |
