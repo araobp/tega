@@ -1110,15 +1110,27 @@ def rpc2(path, args=None, kwargs=None, tega_id=None):
         except gen.TimeoutError:
             raise
 
-def idb_edges():
+def idb_edges(root_oid=None, old_roots=False):
     '''
     Returns all edges of Cont objects stored in idb
     '''
     all_edges = []
-    for root in _idb.values():
+
+    if root_oid:
+        root = _idb[root_oid]
         all_edges.extend([edge for edge in edges(root)])
-    for v in _old_roots.values():
-        for l in v:
+    else:
+        roots = _idb.values()
+        for root in roots:
+            all_edges.extend([edge for edge in edges(root)])
+
+    if root_oid and old_roots:
+        for l in _old_roots[root_oid]:
             all_edges.extend([edge for edge in edges(l[1])])
+    elif old_roots:
+        for v in _old_roots.values():
+            for l in v:
+                all_edges.extend([edge for edge in edges(l[1])])
+
     return all_edges
 

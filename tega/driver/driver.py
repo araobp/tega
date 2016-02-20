@@ -99,7 +99,7 @@ class Driver(object):
             self._tega_id = str(uuid.uuid4())
 
         for cmd in ('roots', 'old', 'channels', 'subscribers',
-                    'ids', 'global', 'forwarders', 'plugins', 'edges'):
+                    'ids', 'global', 'forwarders', 'plugins'):
             setattr(self, cmd, self._build_cmd(cmd))
 
     @property
@@ -152,6 +152,17 @@ class Driver(object):
         '''
         response, body = self._mgmt_cmd('ss', tega_id=self.tega_id)
         return (response.status, response.reason, None)
+
+    def edges(self, root_oid=None, old_roots=False):
+        '''
+        Returns edges of graph data stored in idb
+        '''
+        response, body = self.conn.request(self._cmdencode('edges',
+                                           root_oid=root_oid,
+                                           old_roots=old_roots),
+                                           GET, None, HEADERS)
+        body = json.loads(body.decode('utf-8'))
+        return (response.status, response.reason, body)
 
     def rollback(self, root_oid, backto):
         '''

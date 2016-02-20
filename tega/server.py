@@ -214,7 +214,9 @@ class ManagementRestApiHandler(tornado.web.RequestHandler):
             self.write(json.dumps(_plugins))
             self.set_header('Content-Type', 'application/json')
         elif cmd == 'edges':
-            data = tega.idb.idb_edges()
+            root_oid = self.get_argument('root_oid', None)
+            old_roots = self.get_argument('old_roots', False)
+            data = tega.idb.idb_edges(root_oid, old_roots)
             self.write(json.dumps(data))
             self.set_header('Content-Type', 'application/json')
 

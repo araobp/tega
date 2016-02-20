@@ -266,6 +266,10 @@ class TestSequence(unittest.TestCase):
         self.assertEqual('Paris', TestSequence.driver_g.get('a.b.c'))
 
     def test_idb_edges(self):
+
+        def _edges_set(edges):
+            return ['{}-{}'.format(*edge) for edge in edges]
+
         r = tega.tree.Cont('r')
         r.a.x = 1
         r.a.y = 2
@@ -279,7 +283,6 @@ class TestSequence(unittest.TestCase):
         txid = TestSequence.driver_g.begin()
         TestSequence.driver_g.put(r.b)
         TestSequence.driver_g.commit()
-        status, reason, data = TestSequence.driver_g.edges()
 
         data_compared = [['r(1)', 'r.b(1)'], ['r.b(1)', 'r(1)'], ['r.b(1)',
             'r.b.z(1)'], ['r.b.z(1)', 'r.b(1)'], ['r.b(1)', 'r.b.y(1)'],
@@ -291,8 +294,26 @@ class TestSequence(unittest.TestCase):
                 ['r.a(0)', 'r.a.z(0)'], ['r.a.z(0)', 'r.a(0)'], ['r.a(0)',
                     'r.a.y(0)'], ['r.a.y(0)', 'r.a(0)'], ['r.a(0)', 'r.a.x(0)'],
                 ['r.a.x(0)', 'r.a(0)']]
-        data0 = ['{}-{}'.format(*edge) for edge in data]
-        data1 = ['{}-{}'.format(*edge) for edge in data_compared]
+        _, _, data = TestSequence.driver_g.edges(old_roots=True)
+        data0 = _edges_set(data)
+        data1 = _edges_set(data_compared)
+        self.assertEqual(set(data0), set(data1))
+
+        data_compared = [['r(1)', 'r.b(1)'],
+                ['r.b(1)', 'r(1)'], ['r.b(1)', 'r.b.y(1)'],
+                ['r.b.y(1)', 'r.b(1)'], ['r.b(1)', 'r.b.x(1)'],
+                ['r.b.x(1)', 'r.b(1)'], ['r.b(1)', 'r.b.z(1)'],
+                ['r.b.z(1)', 'r.b(1)'], ['r(1)', 'r.a(0)'],
+                ['r.a(0)', 'r(0)'], ['r.a(0)', 'r.a.y(0)'],
+                ['r.a.y(0)', 'r.a(0)'], ['r.a(0)', 'r.a.x(0)'],
+                ['r.a.x(0)', 'r.a(0)'], ['r.a(0)', 'r.a.z(0)'],
+                ['r.a.z(0)', 'r.a(0)']]
+        _, _, data = TestSequence.driver_g.edges(old_roots=False)
+        data0 = _edges_set(data)
+        data1 = _edges_set(data_compared)
+        self.assertEqual(set(data0), set(data1))
+        _, _, data = TestSequence.driver_g.edges(root_oid='r')
+        data0 = _edges_set(data)
         self.assertEqual(set(data0), set(data1))
 
 if __name__ == '__main__':

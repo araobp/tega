@@ -241,7 +241,12 @@ class TestSequence(unittest.TestCase):
         self.assertEqual(data3, tega.idb.loglist_for_sync('r', 6))
 
     def test_idb_edges(self):
+
+        def _edges_set(edges):
+            return ['{}-{}'.format(*edge) for edge in edges]
+
         self.set_up_idb()
+
         edges0 = [['inventory(3)', 'inventory.ne2(3)'], ['inventory.ne2(3)',
             'inventory(3)'], ['inventory.ne2(3)', 'inventory.ne2.name(3)'],
             ['inventory.ne2.name(3)', 'inventory.ne2(3)'], ['inventory(3)',
@@ -269,8 +274,22 @@ class TestSequence(unittest.TestCase):
                         ['inventory.ne1.name(0)', 'inventory.ne1(1)'],
                         ['inventory.ne1(2)', 'inventory.ne1.address(0)'],
                         ['inventory.ne1.address(0)', 'inventory.ne1(1)']]
-        data0 = ['{}-{}'.format(*edge) for edge in edges0]
-        data1 = ['{}-{}'.format(*edge) for edge in tega.idb.idb_edges()]
+        data0 = _edges_set(edges0)
+        data1 = _edges_set(tega.idb.idb_edges(old_roots=True))
+        self.assertEqual(set(data0), set(data1))
+
+        edges0 = [['inventory(3)', 'inventory.ne2(3)'],
+                ['inventory.ne2(3)', 'inventory(3)'],
+                ['inventory.ne2(3)', 'inventory.ne2.name(3)'],
+                ['inventory.ne2.name(3)', 'inventory.ne2(3)'],
+                ['inventory(3)', 'inventory.ne1(2)'],
+                ['inventory.ne1(2)', 'inventory(2)'],
+                ['inventory.ne1(2)', 'inventory.ne1.name(0)'],
+                ['inventory.ne1.name(0)', 'inventory.ne1(1)'],
+                ['inventory.ne1(2)', 'inventory.ne1.address(0)'],
+                ['inventory.ne1.address(0)', 'inventory.ne1(1)']]
+        data0 = _edges_set(edges0)
+        data1 = _edges_set(tega.idb.idb_edges())
         self.assertEqual(set(data0), set(data1))
 
 if __name__ == '__main__':
