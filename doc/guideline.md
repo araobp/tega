@@ -58,7 +58,7 @@ raw-<router>.<rpc>.a.b.c.d...<args/kwargs>
 
 ```
 
-Or, you use tega db as sort of "global etc file", you may have many-tier tree structure. In this case, super command needs to restar its processes and fetch(GET) all the config data on tega db.
+Or, you use tega db as sort of "global etc file", you may have many-tier tree structure. In this case, super command needs to restar its processes and fetch(GET) all the config data on tega db, evertime the data on tega db is modified. 
 ```
 config-<router>.<service_module>.a.b.c.d...
 
@@ -71,7 +71,7 @@ config-<router>.<service_module>.a.b.c.d...
          |
          V
   [super command] (service module) - - - it restarts its processes every time
-       | | |                             the data on tega db is changed.
+       | | |                             the data on tega db is modified.
    +---+ | +------+
    |     |        |
 [cmd0][cmd1]...[cmdn] 
