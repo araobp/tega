@@ -36,11 +36,29 @@ stats-<router>.<service_module or rpc>.a.b.c.d...
    +---+ | +------+
    |     |        |
 [cmd0][cmd1]...[cmdn]
+
+
+operational-<router>.<service_module or rpc>.a.b.c.d...
+stats-<router>.<service_module or rpc>.a.b.c.d...
+raw-<router>.<rpc>.a.b.c.d...<args/kwargs>
+
+[tree structure on tega db]
+         |
+         |
+        RPC
+         |
+         V
+  [super command] (service module)
+       | | |
+   +---+ | +------+
+   |     |        |
+[cmd0][cmd1]...[cmdn]
+
 ```
 
 Or, you use tega db as sort of "global etc file", you may have many-tier tree structure. In this case, super command needs to restar its processes and fetch(GET) all the config data on tega db.
 ```
-config-<router>.<service_module or rpc>.<args/kwargs>
+config-<router>.<service_module>.a.b.c.d...
 
 [tree structure on tega db]
          |
