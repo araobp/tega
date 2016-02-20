@@ -299,4 +299,7 @@ def main():
             open(HISTORY_FILE, 'a').close()
         driver = Driver(args.address, args.port, subscriber=None)
         while True:
-            process_cmd()
+            try:
+                process_cmd()
+            except ValueError as e:
+                print(e)
