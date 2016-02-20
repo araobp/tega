@@ -114,7 +114,6 @@ Documentation
 Note: Tega db is still in alpha release and part of the documentation here has not been implemented yet.
 
 ###Specification
-- [CLI command usage](./doc/usage.md)
 - [tree structure](./doc/tree.png)
 - [tree structure implemention: Cont class and its attributes](./doc/attributes.md)
 - [YANG-tega comparisons](./doc/yang-tega-comparisons.md)
@@ -124,6 +123,9 @@ Note: Tega db is still in alpha release and part of the documentation here has n
 - [sync path and notifications](./doc/sync_path_and_notifications.md)
 - [subscription scope](./doc/subscription_scope.md)
 - [Guideline](./doc/guideline.md)
+
+###Usage
+- [CLI command usage](./doc/usage.md)
 - [data visualization by using Jupyter notebook](./doc/jupyter.md)
 
 ###CRUD operations
