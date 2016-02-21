@@ -111,7 +111,7 @@ $ ./cli
 - [YANG-tega comparisons](./doc/yang-tega-comparisons.md)
 - [tega message format](./doc/message-format.md)
 - [tega message sequence diagram](./doc/message-sequence.md)
-- [tega db format](./doc/tega-db-format.md)
+- [tega db commit-log format](./doc/tega-db-format.md)
 - [sync path and notifications](./doc/sync_path_and_notifications.md)
 - [subscription scope](./doc/subscription_scope.md)
 - [Guideline](./doc/guideline.md)
