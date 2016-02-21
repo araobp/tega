@@ -139,11 +139,10 @@ $ ./cli
 ![rpc routing](https://docs.google.com/drawings/d/1GHHYrF3s0MRypT_SxHkDAT-aFTfCtMh9NkqQrVEtvqo/pub?w=600&h=480)
 
 ##Note
+
 - Tega db is still in alpha release and part of the documentation here has not been implemented yet.
 - The performance (especially write-performance) of this database is not good:
--- it is a schema-less database
---- dynamic typing
---- nested hash map (hash collisions, rehashing...)
+-- it is a schema-less database: dynamic typing, nested hash map (hash collisions, rehashing)...
 -- it makes use of for-loop a lot
 -- it saves every commit log onto a storage
 
