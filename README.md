@@ -150,6 +150,11 @@ it is a schema-less database and the performance (especially write-performance) 
 - it makes use of for-loop a lot
 - it saves every commit log onto a storage
 
+Some ideas for performance improvements:
+- Make is schema-full and use Cython
+- rewirte it with Golang
+     :
+
 ##References
 * [OVSDB(RFC7047)](https://tools.ietf.org/html/rfc7047)
 * [OpenDaylight MD-SAL datastore](https://wiki.opendaylight.org/view/OpenDaylight_Controller:MD-SAL:Architecture:DOM_DataStore) 
