@@ -5,7 +5,7 @@ Project start: 2014/8/8
 ![tega_idb](./doc/output_3_0.png)
 
 Distributed document-oriented database for small PCs (incl. Raspberry Pi), written in Python:
-- Tornado-based
+- [Tornado](http://www.tornadoweb.org/en/stable/)-based
 - CRUD/RPC supported
 - Transaction supported
 - JSON-oriented (not YANG)
