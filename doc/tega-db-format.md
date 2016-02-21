@@ -1,9 +1,9 @@
-tega db format
-==============
+#tega db commit-log format
+
 ```
 ?                                  <== COMMIT_START_MARKER
 +--------------------------------+
-| record                         |
+| record*                        |
 +--------------------------------+
 +--------------------------------+
 | record                         |
@@ -22,7 +22,8 @@ tega db format
 +--------------------------------+
 | record                         |
 +--------------------------------+
-                  :
+
+* records for PUT, DELETE and SS operations                :
 ```
 
 Sample
