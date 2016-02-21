@@ -151,7 +151,7 @@ it is a schema-less database and the performance (especially write-performance) 
 - it saves every commit log onto a storage
 
 Some ideas for performance improvements:
-- Make is schema-full and use Cython
+- Make it schema-full and use Cython
 - rewirte it with Golang
      :
 
