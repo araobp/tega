@@ -147,13 +147,8 @@ $ ./cli
 it is a schema-less database and the performance (especially write-performance) of this database is not good:
 - dynamic typing
 - nested hash map (hash collisions, rehashing...)
-- it makes use of for-loop a lot
+- it makes use of for-loop a lot (Python's for-loop performance is not good)
 - it saves every commit log onto a storage
-
-Some ideas for performance improvements:
-- Make it schema-full and use Cython
-- rewirte it with Golang
-     :
 
 ##References
 * [OVSDB(RFC7047)](https://tools.ietf.org/html/rfc7047)
