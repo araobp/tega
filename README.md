@@ -151,9 +151,9 @@ it is a schema-less database and the performance (especially write-performance) 
 - it saves every commit log onto a storage
 
 ##References
-* [OVSDB(RFC7047)](https://tools.ietf.org/html/rfc7047)
-* [OpenDaylight MD-SAL datastore](https://wiki.opendaylight.org/view/OpenDaylight_Controller:MD-SAL:Architecture:DOM_DataStore) 
-* [YANG(RFC6020)](https://tools.ietf.org/html/rfc6020)
 * [ZooKeeper](https://www.usenix.org/legacy/event/atc10/tech/full_papers/Hunt.pdf)
 * [Cassandra](http://wiki.apache.org/cassandra/ArticlesAndPresentations)
 * [Hazelcast](https://hazelcast.org/)
+* [OVSDB(RFC7047)](https://tools.ietf.org/html/rfc7047)
+* [YANG(RFC6020)](https://tools.ietf.org/html/rfc6020)
+* [OpenDaylight MD-SAL datastore](https://wiki.opendaylight.org/view/OpenDaylight_Controller:MD-SAL:Architecture:DOM_DataStore)
