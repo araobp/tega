@@ -140,8 +140,13 @@ $ ./cli
 
 ##Note
 
+####Implementation
 - Tega db is still in alpha release and part of the documentation here has not been implemented yet.
-- it is a schema-less database and the performance (especially write-performance) of this database is not good: dynamic typing, nested hash map (hash collisions, rehashing)...
+
+####Performance
+it is a schema-less database and the performance (especially write-performance) of this database is not good:
+- dynamic typing
+- nested hash map (hash collisions, rehashing...)
 - it makes use of for-loop a lot
 - it saves every commit log onto a storage
 
