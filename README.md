@@ -141,10 +141,9 @@ $ ./cli
 ##Note
 
 - Tega db is still in alpha release and part of the documentation here has not been implemented yet.
-- The performance (especially write-performance) of this database is not good:
--- it is a schema-less database: dynamic typing, nested hash map (hash collisions, rehashing)...
--- it makes use of for-loop a lot
--- it saves every commit log onto a storage
+- it is a schema-less database and the performance (especially write-performance) of this database is not good: dynamic typing, nested hash map (hash collisions, rehashing)...
+- it makes use of for-loop a lot
+- it saves every commit log onto a storage
 
 ##References
 * [OVSDB(RFC7047)](https://tools.ietf.org/html/rfc7047)
