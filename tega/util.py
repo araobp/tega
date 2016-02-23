@@ -257,3 +257,22 @@ def readline_reverse(fd):
             line += char
         p -= 1
     yield line[::-1]
+
+def nested_regex_path(regex_path):
+    '''
+    Returns nested regex path as a match pattern
+    
+    >>> import tega.util
+    >>> p = tega.util.nested_regex_path('aaa[a-z]*\.bbb\.c')
+    >>> print(p)
+    aaa[a-z]*(\.bbb(\.c)?)?
+    '''
+    regex_qname = regex_path.split('\.')
+    def _nested():
+        p = regex_qname.pop(0)
+        if regex_qname:
+            return p + '(\.{})?'.format(_nested())
+        else:
+            return p
+    return _nested()
+

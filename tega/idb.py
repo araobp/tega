@@ -1,7 +1,7 @@
 from tega.subscriber import SCOPE
 from tega.messaging import request, REQUEST_TYPE
 from tega.tree import Cont, RPC
-from tega.util import path2qname, qname2path, dict2cont, subtree, deserialize, copy_and_childref, align_vector, commit_log_number, readline_reverse, edges
+from tega.util import path2qname, qname2path, dict2cont, subtree, deserialize, copy_and_childref, align_vector, commit_log_number, readline_reverse, edges, nested_regex_path
 
 import copy
 import collections
@@ -117,10 +117,14 @@ def clear():
     log_file = os.path.join(_log_dir, _commit_log_filename(server_tega_id, 0))
     _log_fd = open(log_file, 'a+')  # append-onlyfile
 
+def _backslash_dot(path):
+    return re.sub('\.', '\\.', path)
+
 def subscribe(subscriber, path, scope=SCOPE.LOCAL):
     '''
     subscribes a path as a channel
     '''
+    path = _backslash_dot(path)
     if not path in channels:
         channels[path] = [subscriber]
     else:
@@ -144,6 +148,7 @@ def unsubscribe(subscriber, path):
     '''
     unsubscribes a path as a channel
     '''
+    path = _backslash_dot(path)
     if path in channels:
         channels[path].remove(subscriber)
         if not channels[path]:
@@ -639,16 +644,40 @@ class tx:
         '''
         path = log['path']
         instance = log['instance']
-
-        path_dot = path + '.'  # a.b.c
         qname = path2qname(path)
 
         # Searches "path" in "channels".
-        # Search order: a.b.c, a.b, a (reversed)
-        for i in reversed(range(len(qname))):
-            _path = qname2path(qname[:i+1])
-            if _path in channels:
-                for subscriber in channels[_path]:
+        # Example:
+        # regex_path = 'a\.b.\c'
+        for regex_path in channels:
+
+            nested = nested_regex_path(regex_path)
+            are_parents_or_me = re.match(nested+'$', path) # (A)a.b or (B)a.b.c
+            if are_parents_or_me:
+                print(are_parents_or_me.groups())
+                idx = 0
+                for elm in are_parents_or_me.groups():
+                    if elm is None:
+                        break
+                    idx += 1
+
+            are_children = re.match(regex_path+'\.', path) # (C)a.b.c.d
+
+            '''
+            if are_parents_or_me:
+                pos_start = are_parents_or_me.span()[1]+1
+                pos_end = len(path)
+                sub_path = path[pos_start:pos_end]
+                for oid in path2qname(sub_path):
+                    if oid in instance:
+                        instance = instance[oid]
+                        path += '.' + oid
+                    else:
+                        break
+            '''
+
+            if are_parents_or_me or are_children:
+                for subscriber in channels[regex_path]:
                     try:
                         if not subscriber in self.notify_batch:
                             self.notify_batch[subscriber] = []
@@ -658,29 +687,6 @@ class tx:
                         logging.warn('subscriber removed - {}'.
                                 format(subscriber))
                         channels[_path].remove(subscriber)
-
-        # Searches a child node of the path
-        for _path in channels.keys():
-            if _path.startswith(path_dot):  #(a.b.c.) matches a.b.c.d.e
-                subpath = re.sub(path_dot, '', _path)  #(a.b.c)d.e => d.e
-                qname = path2qname(subpath)  #[d, e]
-                path_extended = path  #a.b.c
-                for oid in qname:
-                    if oid in instance:
-                        instance = instance[oid]
-                        path_extended += '.' + oid
-                    else:
-                        instance = None
-                        break
-                if instance:
-                    for subscriber in channels[_path]:
-                        if not subscriber in self.notify_batch:
-                                self.notify_batch[subscriber] = []
-                        log['path'] = path_extended
-                        log['instance'] = instance
-
-                        self.notify_batch[subscriber].append(log)
-
 
 def get(path, version=None):
     '''
@@ -1026,21 +1032,6 @@ def save_snapshot(tega_id):
     _log_fd.write(finish_marker+'\n')  # commit finish marker
     _log_fd.flush()
     os.fsync(_log_fd)
-
-def _build_scope_matcher(sync_path):
-    '''
-    Returns sync_path scope matcher.
-    '''
-    pattern = re.compile('^'+sync_path+'$|^'+sync_path+'\.')
-
-    def match(path):
-        path_dot = path + '.'
-        if pattern.match(path) or sync_path.startswith(path_dot):
-            return True
-        else:
-            return False
-
-    return match
 
 def publish(channel, tega_id, message, subscriber):
     '''

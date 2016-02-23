@@ -121,5 +121,9 @@ class TestSequence(unittest.TestCase):
         data1 = ['{}-{}'.format(*edge) for edge in tega.util.edges(r)]
         self.assertEqual(set(data0), set(data1))
 
+    def test_nested_regex_path(self):
+        self.assertEqual('aaa[a-z]*(\.bbb(\.c)?)?',
+                tega.util.nested_regex_path('aaa[a-z]*\.bbb\.c'))
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

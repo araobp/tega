@@ -100,15 +100,6 @@ class TestSequence(unittest.TestCase):
         self.assertTrue(dict(b=2) in notifications)
         self.assertTrue(dict(c=3) in notifications)
 
-    def test_build_scope_matcher(self):
-        matcher = tega.idb._build_scope_matcher('a.b.c')
-        self.assertTrue(matcher('a'))
-        self.assertTrue(matcher('a.b'))
-        self.assertTrue(matcher('a.b.c'))
-        self.assertTrue(matcher('a.b.c.d'))
-        self.assertFalse(matcher('a.x'))
-        self.assertFalse(matcher('a.b.x'))
-
     def test_get_version(self):
         self.set_up_idb()
         self.assertEqual(0, tega.idb.get_version('inventory.ne1.name'))

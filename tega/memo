@@ -1,0 +1,34 @@
+   __                  
+  / /____  ____ _____ _
+ / __/ _ \/ __ `/ __ `/
+/ /_/  __/ /_/ / /_/ / 
+\__/\___/\__, /\__,_/  
+        /____/       
+
+tega_id: global, config: None, operational: None
+
+Namespace(config=None, datadir='./var', extensions='../plugins/global', maxlen=10, mhost=None, mport=None, operational=None, port=8888, tegaid='global')
+INFO:2016-02-23 07:07:13,580:Reloading log from ./var...
+INFO:2016-02-23 07:07:13,584:Reloading done
+INFO:2016-02-23 07:07:13,597:plugin attached to idb: GlobalPlugin1
+INFO:2016-02-23 07:07:18,800:WebSocket(server): connection established with <tega.server.PubSubHandler object at 0xb66698ac>
+DEBUG:2016-02-23 07:07:18,803:WebSocket(server): message received - 
+SESSION 8ce42875-a619-4965-8f7a-34443c5a73d8 local
+INFO:2016-02-23 07:07:20,709:WebSocket(server): connection established with <tega.server.PubSubHandler object at 0xb6669b6c>
+DEBUG:2016-02-23 07:07:20,724:WebSocket(server): message received - 
+SESSION 653c2a7b-2ac1-49f4-ad03-a0b4fdccc487 local
+DEBUG:2016-02-23 07:07:26,180:WebSocket(server): message received - 
+SUBSCRIBE a.b.c global
+('.b', None)
+INFO:2016-02-23 07:07:33,453:200 PUT /a/b/?tega_id=8ce42875-a619-4965-8f7a-34443c5a73d8 (::1) 132.91ms
+('.b.c', '.c')
+INFO:2016-02-23 07:07:40,465:200 PUT /a/b/c/?tega_id=8ce42875-a619-4965-8f7a-34443c5a73d8 (::1) 69.78ms
+DEBUG:2016-02-23 07:09:48,205:WebSocket(server): message received - 
+SUBSCRIBE A.B.C.D.E global
+('.B.C', '.C', None, None)
+INFO:2016-02-23 07:10:00,463:200 PUT /A/B/C/?tega_id=8ce42875-a619-4965-8f7a-34443c5a73d8 (::1) 104.01ms
+('.B.C.D', '.C.D', '.D', None)
+INFO:2016-02-23 07:10:39,152:200 PUT /A/B/C/D/?tega_id=8ce42875-a619-4965-8f7a-34443c5a73d8 (::1) 87.77ms
+INFO:2016-02-23 07:11:25,666:<tega.server.WebSocketSubscriber object at 0xb665ee0c> not subscribing any channels
+INFO:2016-02-23 07:11:25,669:WebSocket(server): connection closed with <tega.server.PubSubHandler object at 0xb66698ac> and all channels unsubscribed
+
