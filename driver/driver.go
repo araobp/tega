@@ -316,16 +316,39 @@ func (ope *Operation) Delete(path string) error {
 	return err
 }
 
+// Converts regexFlag into string
+func regexFlagString(regexFlag bool) string {
+	s := "False"
+	if regexFlag {
+		s = "True"
+	}
+	return s
+}
+
 // Sends SUBSCRIBE to tega server
 func (ope *Operation) Subscribe(path string, scope string) error {
-	subscribe := strings.Join([]string{SUBSCRIBE, path, scope}, " ")
+	subscribe := strings.Join([]string{SUBSCRIBE, path, scope, regexFlagString(false)}, " ")
+	_, err := ope.ws.Write([]byte(subscribe))
+	return err
+}
+
+// Sends SUBSCRIBE to tega server
+func (ope *Operation) SubscribeRegex(path string, scope string, regexFlag bool) error {
+	subscribe := strings.Join([]string{SUBSCRIBE, path, scope, regexFlagString(regexFlag)}, " ")
 	_, err := ope.ws.Write([]byte(subscribe))
 	return err
 }
 
 // Sends UNSUBSCRIBE to tega server
 func (ope *Operation) Unsubscribe(path string) error {
-	unsubscribe := strings.Join([]string{UNSUBSCRIBE, path}, " ")
+	unsubscribe := strings.Join([]string{UNSUBSCRIBE, path, regexFlagString(false)}, " ")
+	_, err := ope.ws.Write([]byte(unsubscribe))
+	return err
+}
+
+// Sends UNSUBSCRIBE to tega server
+func (ope *Operation) UnsubscribeRegex(path string, regexFlag bool) error {
+	unsubscribe := strings.Join([]string{UNSUBSCRIBE, path, regexFlagString(regexFlag)}, " ")
 	_, err := ope.ws.Write([]byte(unsubscribe))
 	return err
 }

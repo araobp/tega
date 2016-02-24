@@ -116,13 +116,19 @@ class PlugIn(Subscriber):
         '''
         return tega.idb.rpc2(path, args, kwargs, self.tega_id)
 
-    def subscribe(self, path, scope=None):
+    def subscribe(self, path, scope=None, regex_flag=False):
         '''
         Calls tega.idb.subscribe().
         '''
         if scope == None:
             scope = self.scope 
-        tega.idb.subscribe(self, path, scope)
+        tega.idb.subscribe(self, path, scope, regex_flag)
+
+    def unsubscribe(self, path, regex_flag=False):
+        '''
+        Calls tega.idb.unsubscribe().
+        '''
+        tega.idb.unsubscribe(self, path, regex_flag)
 
     def get(self, path, version=None):
         '''

@@ -352,17 +352,17 @@ class Driver(object):
         self._send(cmd='PUBLISH', qs=[channel],
                 message=json.dumps(dict(message=message)))
 
-    def subscribe(self, path, scope=SCOPE.LOCAL):
+    def subscribe(self, path, scope=SCOPE.LOCAL, regex_flag=False):
         '''
         Sends SUBSCRIBE to tega REST server.
         '''
-        self._send(cmd='SUBSCRIBE', qs=[path, scope.value])
+        self._send(cmd='SUBSCRIBE', qs=[path, scope.value, str(regex_flag)])
 
-    def unsubscribe(self, path):
+    def unsubscribe(self, path, regex_flag=False):
         '''
         Sends UNSUBSCRIBE to tega REST server.
         '''
-        self._send(cmd='UNSUBSCRIBE', qs=[path])
+        self._send(cmd='UNSUBSCRIBE', qs=[path, str(regex_flag)])
 
     def unsubscribe_all(self):
         '''

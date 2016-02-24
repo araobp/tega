@@ -120,11 +120,12 @@ def clear():
 def _backslash_dot(path):
     return re.sub('\.', '\\.', path)
 
-def subscribe(subscriber, path, scope=SCOPE.LOCAL):
+def subscribe(subscriber, path, scope=SCOPE.LOCAL, regex_flag=False):
     '''
     subscribes a path as a channel
     '''
-    path = _backslash_dot(path)
+    if not regex_flag:
+        path = _backslash_dot(path)
     if not path in channels:
         channels[path] = [subscriber]
     else:
@@ -144,11 +145,12 @@ def subscribe(subscriber, path, scope=SCOPE.LOCAL):
                 if subscriber != _subscriber:
                     _subscriber.on_subscribe(path, scope)
 
-def unsubscribe(subscriber, path):
+def unsubscribe(subscriber, path, regex_flag=False):
     '''
     unsubscribes a path as a channel
     '''
-    path = _backslash_dot(path)
+    if not regex_flag:
+        path = _backslash_dot(path)
     if path in channels:
         channels[path].remove(subscriber)
         if not channels[path]:
@@ -652,29 +654,31 @@ class tx:
         for regex_path in channels:
 
             nested = nested_regex_path(regex_path)
+            
             are_parents_or_me = re.match(nested+'$', path) # (A)a.b or (B)a.b.c
-            if are_parents_or_me:
-                print(are_parents_or_me.groups())
-                idx = 0
-                for elm in are_parents_or_me.groups():
-                    if elm is None:
-                        break
-                    idx += 1
-
             are_children = re.match(regex_path+'\.', path) # (C)a.b.c.d
 
-            '''
             if are_parents_or_me:
-                pos_start = are_parents_or_me.span()[1]+1
-                pos_end = len(path)
-                sub_path = path[pos_start:pos_end]
-                for oid in path2qname(sub_path):
-                    if oid in instance:
-                        instance = instance[oid]
-                        path += '.' + oid
+                #print(are_parents_or_me.groups())
+                idx = 1
+                for elm in are_parents_or_me.groups():
+                    if elm:
+                        idx += 1
                     else:
                         break
-            '''
+                sub_qname = regex_path.split('\.')[idx:]
+                #print(are_parents_or_me.groups())
+                #print(sub_qname)
+                for regex_oid in sub_qname:
+                    for oid in instance:
+                        # TODO: regex matching multiple children
+                        if not oid.startswith('_') and re.match(regex_oid, oid):
+                            instance = instance[oid]
+                            path += '.' + oid
+                        else:
+                            break
+                        log['path'] = path
+                        log['instance'] = instance
 
             if are_parents_or_me or are_children:
                 for subscriber in channels[regex_path]:

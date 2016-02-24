@@ -22,13 +22,14 @@ readline.parse_and_bind('tab: complete')
 readline.parse_and_bind('set editing-mode vi')
 readline.set_history_length(HISTORY_LENGTH)
 
-operations = '|'.join(['get', 'geta', 'put', 'pute', 'delete', 
-    'begin', 'cancel', 'commit', 'subscribe', 'unsubscribe', 'publish'])
+operations = '|'.join(['get', 'geta', 'put', 'pute', 'del', 
+    'begin', 'cancel', 'commit', 'sub', 'subr',
+    'unsub', 'unsubr', 'pub'])
 cmd_pattern = re.compile('^(' + operations +
-        ')\s+([\(\)\[\]=\-,\.\w\*]+)\s*(-*\d*)$|^(rollback)\s+([\w\-]+)\s+(-\d*)$')
+        r')\s+([\(\)\[\]=\-,\.\w\*\\]+)\s*(-*\d*)$|^(rollback)\s+([\w\-]+)\s+(-\d*)$')
 rpc_pattern = re.compile('^[\.\w]+\([\w\s\'\"\,\.\/=-]*\)$')
 methods = {'get': OPE.GET.name, 'geta': OPE.GET.name,
-    'put': OPE.PUT.name, 'delete': OPE.DELETE.name}
+    'put': OPE.PUT.name, 'del': OPE.DELETE.name}
 HELP = '''
 [Database management] (M)andatory, (O)ptional
 command    root version explanation
@@ -51,7 +52,7 @@ put         M     O         CRUD create/update operation
 pute        M     O      X  CRUD create/update operation (ephemeral node)
 get         M     O         CRUD read operation
 geta        M     O         CRUD read operation with internal attributes
-delete      M     O         CRUD delete operation
+del         M     O         CRUD delete operation
 begin                       begin a transaction
 cand                        show a candidate config (not implemented yet)
 cancel                      cancel a transaction
@@ -60,16 +61,18 @@ commit                      commit a transaction
 [PubSub] (M)andatory, (O)ptional, (X) -s option required
 command    path version -s  explanation
 ---------- ---- ------- --- -------------------------------------------------
-subscribe   M            X  subscribe a path as a pubsub channel
-unsubscribe M            X  unsubscribe a path as a pubsub channel
-publish     M            X  publish a message to subscribers
+sub         M            X  subscribe a path as a pubsub channel
+subr        M            X  subscribe a regex path as a pubsub channel
+unsub       M            X  unsubscribe a path as a pubsub channel
+unsubr      M            X  unsubscribe a regex path as a pubsub channel
+pub         M            X  publish a message to subscribers
 ids                         show all tega IDs of plugins and drivers
 channels                    show channels
 global                      show global channels (global or sync)
 subscribers                 show subscribers
 forwarders                  show subscribe forwarders
 
-"unsubscribe *" to subscribe all channels
+"unsub *" to subscribe all channels
 
 [RPC]
 For example, type a command like this:
@@ -184,22 +187,24 @@ def process_cmd(tornado_loop=False):
             rollback = g.group(4)
             root_oid = g.group(5)
             backto = g.group(6)
-            if ope == 'subscribe':
-                # SUBSCRIBE from CLI is propagated to global idb. 
-                #driver.subscribe(path, SCOPE.SYNC)
+            if ope == 'sub':
                 driver.subscribe(path, SCOPE.GLOBAL)
-            elif ope == 'unsubscribe':
+            elif ope == 'subr':
+                driver.subscribe(path, SCOPE.GLOBAL, regex_flag=True)
+            elif ope == 'unsub':
                 if path == '*':
                     driver.unsubscribe_all()
                 else:
                     driver.unsubscribe(path)
+            elif ope == 'unsubr':
+                driver.unsubscribe(path, regex_flag=True)
             else:
                 if rollback:
                     status, reason, data = getattr(driver, 'rollback')(root_oid, backto) 
                     print('{} {}'.format(status, reason))
                 else:
                     body = None
-                    if ope in ('put', 'pute', 'publish'):
+                    if ope in ('put', 'pute', 'pub'):
                         buf = io.StringIO()
                         while True:
                             cmd = input()
@@ -220,6 +225,9 @@ def process_cmd(tornado_loop=False):
                         kwargs['message'] = body 
                     elif ope == 'get' or ope == 'geta':
                         kwargs['python_dict'] = True
+                        kwargs['path'] = path
+                    elif ope == 'del':
+                        ope = 'delete'
                         kwargs['path'] = path
                     else:
                         kwargs['path'] = path

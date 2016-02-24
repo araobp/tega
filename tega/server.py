@@ -362,12 +362,19 @@ class PubSubHandler(tornado.websocket.WebSocketHandler):
             if param:
                 channel = param[0]
                 scope = SCOPE(param[1])
-                tega.idb.subscribe(self.subscriber, channel, scope)
+                regex_flag = False 
+                if param[2] == 'True':
+                    regex_flag = True
+                tega.idb.subscribe(self.subscriber, channel, scope, regex_flag)
             else:
                 logging.warn('WebSocket(server): no channel indicated in SUBSCRIBE request')
         elif cmd == 'UNSUBSCRIBE':
             if param:
-                tega.idb.unsubscribe(self.subscriber, param)
+                channel = param[0]
+                regex_flag = False 
+                if param[1] == 'True':
+                    regex_flag = True
+                tega.idb.unsubscribe(self.subscriber, channel, regex_flag)
                 self.write_message('UNSUBSCRIBE {}'.format(param))
             else:
                 tega.idb.unsubscribe_all(self.subscriber)
