@@ -129,9 +129,10 @@ _quoted_arg_matcher = re.compile('\s*([\'\"]+[\w\s\.\/-]*[\'\"]+)\s*')
 
 def copy_and_childref(cont):
     '''
-    Returns its "narrow" copy and references to its children
+    Returns its "shallow" copy and references to its children
     '''
-    obj = cont.__class__()  # Cont
+    #obj = cont.__class__()  # Cont
+    obj = Cont()
     childref = []
     for k,v in cont.__dict__.items():
         obj._setattr(k ,v)

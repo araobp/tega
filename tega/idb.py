@@ -10,11 +10,13 @@ import hashlib
 import logging
 import os
 import re
-import time
+import datetime
 from tornado import gen
 import traceback
 import uuid
 import json 
+
+now = datetime.datetime.now
 
 VERSION = '_version'
 COMMIT_START_MARKER = '?'
@@ -169,7 +171,7 @@ def unsubscribe_all(subscriber):
     if subscriber in subscribers:
         channels = [channel for channel in subscribers[subscriber]]
         for channel in channels:
-            unsubscribe(subscriber, channel)
+            unsubscribe(subscriber, channel, regex_flag=True)
     else:
         logging.info('{} not subscribing any channels'.format(subscriber))
 
@@ -370,7 +372,7 @@ class tx:
                   (C)        - extend ->
        
         '''
-        target = _idb
+        original = _idb
         new_root = None
         tail = None
         root = None
@@ -386,17 +388,17 @@ class tx:
             new_root = root
             go = True
             no_copy = True  # operations performed on the copy
-        elif not root_oid in target:  # the root does not exist in _idb  
+        elif not root_oid in original:  # the root does not exist in _idb  
             new_root = Cont(root_oid)
         else:  # the root exists in _idb but its copy is not in self.candidate
-            root = target[root_oid]
+            root = original[root_oid]
             prev_version = root._getattr(VERSION)
             new_version = prev_version + 1
             new_root, childref = copy_and_childref(root)
             redirection = [(root, childref)]
             go = True
 
-        target = root
+        original = root
         tail = new_root
         
         if above_tail:
@@ -407,20 +409,19 @@ class tx:
         else:
             for iid in qname[1:]:
                 parent = tail
-                if go and iid in target:
-                    target = target._extend(iid)
+                if go and iid in original:
+                    original = original._extend(iid)
                     if no_copy:
-                        tail = target
+                        tail = original
                     else:
-                        tail, childref = copy_and_childref(target)
-                        redirection.append((target, childref))
+                        tail, childref = copy_and_childref(original)
+                        redirection.append((original, childref))
                     tail._setattr('_parent', parent)
-                    parent._setattr(VERSION, new_version)
                     parent._setattr(iid, tail)
                 else:
                     go = False
                     tail = parent._extend(iid)
-                    parent._setattr(VERSION, new_version)
+                parent._setattr(VERSION, new_version)
 
             tail._setattr(VERSION, new_version)
             
@@ -438,7 +439,7 @@ class tx:
             crud[0](*crud[1:])
 
         if len(self.commit_queue) > 0:
-            finish_marker = COMMIT_FINISH_MARKER+'{}'.format(time.time())
+            finish_marker = COMMIT_FINISH_MARKER+'{}'.format(now())
             if write_log:  # Writes log
                 if _log_fd:
                     _log_fd.write(COMMIT_START_MARKER+'\n')  # commit start
@@ -1026,7 +1027,7 @@ def save_snapshot(tega_id):
         _log_fd.close()
     _log_fd = open(log_file, 'a+')  # append-only file
 
-    finish_marker = COMMIT_FINISH_MARKER+'{}'.format(time.time())  # TODO: is raise_exception OK?
+    finish_marker = COMMIT_FINISH_MARKER+'{}'.format(now())
 
     _log_fd.write(COMMIT_START_MARKER+'\n')  # commit start
     for root_oid, instance in _idb_snapshot.items():

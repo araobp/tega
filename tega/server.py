@@ -690,10 +690,13 @@ def main():
             default=str(uuid.uuid4()))
     parser.add_argument("-e", "--extensions", help="Directory of tega plugins",
             type=str, default=None)
-    parser.add_argument("-l", "--maxlen", help="The number of old roots kept in idb",
-            type=int, default=tega.idb.OLD_ROOTS_LEN)
+    parser.add_argument("-l", "--maxlen", help="The number of old roots kept in idb", type=int, default=tega.idb.OLD_ROOTS_LEN)
+    parser.add_argument("-L", "--loglevel", help="Logging level", type=str,
+            default='INFO')
 
     args = parser.parse_args()
+
+    logging.getLogger().setLevel(args.loglevel)
 
     server_tega_id = args.tegaid
     print('{}\n\ntega_id: {}, config: {}, operational: {}\n'.format(LOGO,
