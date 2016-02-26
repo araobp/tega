@@ -145,6 +145,9 @@ For example,
 - [My neutron-lan project](https://github.com/araobp/neutron-lan) has taken the pattern [D]. The implementation of the agent is not simple.
 - [My nlan project](https://github.com/araobp/nlan) has been taking the pattern [A], since Docker is for an immutable infrastructure. The implementation of the agent is quite simple.
 - In general, commercial-grade network controllers take the pattern [E]. It requires a development team with a lot of software engineers.
+- Signalling protocol developers think differently... [My another drawing](https://docs.google.com/drawings/d/1x8mm-h4Gxn8rfL7fV-2sgnjpxejSaR8cLfzr9vNJFu4/pub?w=960&h=720)
+
+You had better study how databases (incl. NOSQL ones) realize data synchronization in a cluster.
 
 ##Note
 
