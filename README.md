@@ -144,7 +144,7 @@ $ ./cli
 For example,
 - [My neutron-lan project](https://github.com/araobp/neutron-lan) has taken the pattern [D]. The implementation of the agent is not simple.
 - [My nlan project](https://github.com/araobp/nlan) has been taking the pattern [A], since Docker is for an immutable infrastructure. The implementation of the agent is quite simple.
-- In general, commercial-grade network controllers support the pattern [E]. It requires a development team with a lot of software engineers.
+- In general, commercial-grade network controllers take the pattern [E]. It requires a development team with a lot of software engineers.
 
 ##Note
 
