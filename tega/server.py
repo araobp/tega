@@ -7,7 +7,7 @@ from tega.messaging import build_parser, parse_rpc_body, request, on_response, R
 import tega.subscriber
 from tega.subscriber import Subscriber, SCOPE
 from tega.tree import Cont, is_builtin_type
-from tega.util import url2path, subtree
+from tega.util import url2path, qname2path, subtree, str2bool
 
 from tornado import gen
 import tornado.ioloop
@@ -233,24 +233,22 @@ class RestApiHandler(tornado.web.RequestHandler):
         internal = self.get_argument('internal', None)
         txid = self.get_argument('txid', None)
         tega_id = self.get_argument('tega_id')
+        regex_flag = str2bool(self.get_argument('regex_flag', False))
         if version:
             version = int(version)
-        if internal == 'True':
-            internal = True
-        else:
-            internal = False
+        internal = str2bool(internal)
         path = url2path(id)
         value = None
         try:
-            if txid:
-                with tx_lock:
-                    if txid in transactions:
-                        t = transactions[txid]['tx']
-                        value = t.get(path, version=version)
-            else:
-                value = tega.idb.get(url2path(id), version=version)
+            value = tega.idb.get(url2path(id), version=version,
+                    regex_flag=regex_flag)
             if isinstance(value, Cont) or is_builtin_type(value):
                 self.write(value.dumps_(internal=internal))
+            elif isinstance(value, list):
+                dict_ = {v[0]: {'groups':v[2],
+                    'instance':v[1].serialize_(internal=internal)} for v in
+                    value}
+                self.write(json.dumps(dict_))
             else:
                 self.write(json.dumps(value))
             self.set_header('Content-Type', 'application/json')
@@ -362,18 +360,14 @@ class PubSubHandler(tornado.websocket.WebSocketHandler):
             if param:
                 channel = param[0]
                 scope = SCOPE(param[1])
-                regex_flag = False 
-                if param[2] == 'True':
-                    regex_flag = True
+                regex_flag = str2bool(param[2])
                 tega.idb.subscribe(self.subscriber, channel, scope, regex_flag)
             else:
                 logging.warn('WebSocket(server): no channel indicated in SUBSCRIBE request')
         elif cmd == 'UNSUBSCRIBE':
             if param:
                 channel = param[0]
-                regex_flag = False 
-                if param[1] == 'True':
-                    regex_flag = True
+                regex_flag = str2bool(param[1])
                 tega.idb.unsubscribe(self.subscriber, channel, regex_flag)
                 self.write_message('UNSUBSCRIBE {}'.format(param))
             else:

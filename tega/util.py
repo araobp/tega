@@ -277,3 +277,8 @@ def nested_regex_path(regex_path):
             return p
     return _nested()
 
+def str2bool(str_):
+    if str_ == 'True':
+        return True
+    else:
+        return False

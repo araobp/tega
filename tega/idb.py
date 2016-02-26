@@ -498,17 +498,6 @@ class tx:
 
         self._notify_append(log)
 
-    def get(self, path, version=None, tega_id=None):
-        '''
-        GET operation.
-        
-        By performing GET operation in a transaction, dependency graph
-        including GET, PUT and DELETE can be organized. The graph is
-        represented as a log.
-
-        '''
-        return get(path, version)
-
     def put(self, instance, tega_id=None, version=None, deepcopy=True,
             path=None, ephemeral=False):
         '''
@@ -693,31 +682,74 @@ class tx:
                                 format(subscriber))
                         channels[_path].remove(subscriber)
 
-def get(path, version=None):
+def _fetch_root_with_version(root_oid, version):
+    root = _idb[root_oid]
+    highest = root._version
+    if version is None or version == highest:
+        return root
+    else:
+        root = None
+        if version < 0:
+            version = highest + version
+        for tup in _old_roots[root_oid]:
+            if tup[0] == version:
+                root = tup[1]
+        if root:
+            return root
+        else:
+            raise KeyError
+
+def _select(original, regex_qname, regex_groups):
+    '''
+    Selects children.
+    '''
+    regex_oid = regex_qname[0]
+    for k, v in original.items():
+        m = re.match(regex_oid, k)
+        if m:
+            g = m.groups()
+            if g:
+                regex_groups_ = copy.copy(regex_groups)
+                regex_groups_.append(g)
+            if isinstance(original, Cont) and len(regex_qname) > 1:
+                yield from _select(v, regex_qname[1:], regex_groups_)
+            else:
+                yield (qname2path(v.qname_()), v, regex_groups_)
+
+def get(path, version=None, regex_flag=False):
     '''
     GET operation.
 
     Raises KeyError if path is not found in idb.
     '''
     try:
-        qname = path2qname(path)
-        tail = None
-        root_oid = qname[0]
-        root = _idb[root_oid]
-        highest = root._version
-        if version is None or version == highest:
-            tail = root
+        if regex_flag:
+            regex_qname = path.split('\.')
+            regex_oid = regex_qname[0]
+            instances = []
+            for root_oid in _idb:
+                m = re.match(regex_oid, root_oid)
+                if m:
+                    regex_groups = []
+                    g = m.groups()
+                    if g:
+                        regex_groups.append(g)
+                    instance = _fetch_root_with_version(root_oid, version)
+                    if len(regex_qname) > 1:
+                        g = _select(instance, regex_qname[1:], regex_groups)
+                        for match in g:
+                            instances.append(match)
+                    else:
+                        instances.append((root_oid, instance, regex_groups))
+            return instances
         else:
-            if version < 0:
-                version = highest + version
-            for tup in _old_roots[root_oid]:
-                if tup[0] == version:
-                    tail = tup[1]
-        if tail:
+            qname = path2qname(path)
+            root_oid = qname[0]
+            instance = _fetch_root_with_version(root_oid, version)
             if len(qname) > 1:
-                for iid in qname[1:]:
-                    tail = tail._getattr(iid) # _getattr is used to avoid creating unnecessay nodes.
-        return tail
+                for oid in qname[1:]:
+                    instance = instance._getattr(oid) # _getattr is used to avoid creating unnecessay nodes.
+            return instance 
     except KeyError:
         raise
 

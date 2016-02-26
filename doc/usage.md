@@ -7,6 +7,78 @@
             |          |
        Terminal 1  Terminal 2
 ```
+
+###Get with regular expressions
+```
+tega CLI (q: quit, h:help)
+[tega: 0] get r-a
+a: {x: 1, y: 2, z: 3}
+b: {x: 4, y: 5, z: 6}
+
+[tega: 1] get r-b
+a: {x: 1, y: 2, z: 3}
+b: {x: 4, y: 5, z: 6}
+
+[tega: 2] getr r-(.*)
+r-a:
+  groups:
+  - [a]
+  instance:
+    a: {x: 1, y: 2, z: 3}
+    b: {x: 4, y: 5, z: 6}
+r-b:
+  groups:
+  - [b]
+  instance:
+    a: {x: 1, y: 2, z: 3}
+    b: {x: 4, y: 5, z: 6}
+
+[tega: 3] getr (r)-(.*)\.(.*)
+r-a.a:
+  groups:
+  - [r, a]
+  - [a]
+  instance: {x: 1, y: 2, z: 3}
+r-a.b:
+  groups:
+  - [r, a]
+  - [b]
+  instance: {x: 4, y: 5, z: 6}
+r-b.a:
+  groups:
+  - [r, b]
+  - [a]
+  instance: {x: 1, y: 2, z: 3}
+r-b.b:
+  groups:
+  - [r, b]
+  - [b]
+  instance: {x: 4, y: 5, z: 6}
+
+[tega: 4] getr r-(.*)\.(.*)
+r-a.a:
+  groups:
+  - [a]
+  - [a]
+  instance: {x: 1, y: 2, z: 3}
+r-a.b:
+  groups:
+  - [a]
+  - [b]
+  instance: {x: 4, y: 5, z: 6}
+r-b.a:
+  groups:
+  - [b]
+  - [a]
+  instance: {x: 1, y: 2, z: 3}
+r-b.b:
+  groups:
+  - [b]
+  - [b]
+  instance: {x: 4, y: 5, z: 6}
+
+```
+
 ###Messaging(pubsub)
 ```
 <<<At Terminal 1>>>
@@ -30,22 +102,33 @@ Good Morning!
 
 ```
 
-###Taking a snapshot
+###Messaging(pubsub) with regular expressions
 ```
+<<<At Terminal 1>>
+$ ./cli -s
+tega CLI (q: quit, h:help)
+[tega: 0] --- session ready ---
+[tega: 1] subr r-\w*\.a       
+[tega: 2] subscribers
+GlobalPlugin1: [GlobalPlugin1]
+d79feb02-3a81-4e7e-b37d-92dafc1f0a94: [r-\w*\.a]
+
+[tega: 3] 
+<NOTIFY>
+[{'instance': 'XXX', 'tega_id': None, 'ope': 'PUT', 'path': 'r-a.a.x'}]
+[tega: 4] 
+<NOTIFY>
+[{'instance': 'YYY', 'tega_id': None, 'ope': 'PUT', 'path': 'r-b.a.x'}]
+
+<<<At Terminal 2>>
 $ ./cli
 tega CLI (q: quit, h:help)
-[tega: 0] put a.b.c
-1
+[tega: 0] put r-a.a.x
+XXX
 
-[tega: 1] put a.x.y
-"alice"
+[tega: 1] put r-b.a.x
+YYY
 
-[tega: 2] get a
-b: {c: 1}
-x: {y: alice}
-
-[tega: 3] ss
-200 OK
 ```
 
 ###Manipulating ephemeral nodes
@@ -85,3 +168,22 @@ tega CLI (q: quit, h:help)
 [tega: 1] get a
 {x: 2}
 ```
+
+###Taking a snapshot
+```
+$ ./cli
+tega CLI (q: quit, h:help)
+[tega: 0] put a.b.c
+1
+
+[tega: 1] put a.x.y
+"alice"
+
+[tega: 2] get a
+b: {c: 1}
+x: {y: alice}
+
+[tega: 3] ss
+200 OK
+```
+

@@ -198,13 +198,14 @@ class Driver(object):
         response, body = self.conn.request(url, DELETE, None, HEADERS)
         self._response_check(response)
 
-    def get(self, path, version=None, internal=False, python_dict=False):
+    def get(self, path, version=None, internal=False, python_dict=False,
+            regex_flag=False):
         '''
         CRUD read operation
         '''
         url = self._urlencode(path2url(path), txid=self.txid,
                              version=version, tega_id=self.tega_id,
-                             internal=internal)
+                             internal=internal, regex_flag=str(regex_flag))
 
         response, body = self.conn.request(url, GET, None, HEADERS)
         if response.status >= 300 or response.status < 200:
@@ -214,6 +215,8 @@ class Driver(object):
         if python_dict:
             return dict_data  # Returns Dict
         else:
+            if regex_flag:
+                return [dict2cont(elm) for elm in dict_data]
             return subtree(path, dict_data)  # Returns Cont
 
     def begin(self):

@@ -22,14 +22,13 @@ readline.parse_and_bind('tab: complete')
 readline.parse_and_bind('set editing-mode vi')
 readline.set_history_length(HISTORY_LENGTH)
 
-operations = '|'.join(['get', 'geta', 'put', 'pute', 'del', 
+operations = '|'.join(['get', 'getr', 'geta', 'put', 'pute', 'del', 
     'begin', 'cancel', 'commit', 'sub', 'subr',
     'unsub', 'unsubr', 'pub'])
 cmd_pattern = re.compile('^(' + operations +
         r')\s+([\(\)\[\]=\-,\.\w\*\\]+)\s*(-*\d*)$|^(rollback)\s+([\w\-]+)\s+(-\d*)$')
 rpc_pattern = re.compile('^[\.\w]+\([\w\s\'\"\,\.\/=-]*\)$')
-methods = {'get': OPE.GET.name, 'geta': OPE.GET.name,
-    'put': OPE.PUT.name, 'del': OPE.DELETE.name}
+
 HELP = '''
 [Database management] (M)andatory, (O)ptional
 command    root version explanation
@@ -51,6 +50,7 @@ command    path version -s  explanation
 put         M     O         CRUD create/update operation
 pute        M     O      X  CRUD create/update operation (ephemeral node)
 get         M     O         CRUD read operation
+getr        M     O         CRUD read operation with regex path
 geta        M     O         CRUD read operation with internal attributes
 del         M     O         CRUD delete operation
 begin                       begin a transaction
@@ -217,26 +217,35 @@ def process_cmd(tornado_loop=False):
                     params = []
                     url_params = '' 
                     kwargs = {}
-                    if ope in ('put', 'pute'):
+                    if ope == 'put':
                         instance = subtree(path, body)
                         kwargs['instance'] = instance 
+                    elif ope == 'pute':
+                        ope = 'put'
+                        instance = subtree(path, body)
+                        kwargs['instance'] = instance 
+                        kwargs['ephemeral'] = True
                     elif ope == 'publish':
                         kwargs['channel'] = path 
                         kwargs['message'] = body 
-                    elif ope == 'get' or ope == 'geta':
+                    elif ope == 'get':
                         kwargs['python_dict'] = True
                         kwargs['path'] = path
+                    elif ope == 'geta':
+                        ope = 'get'
+                        kwargs['python_dict'] = True
+                        kwargs['path'] = path
+                        kwargs['internal'] = True
+                    elif ope == 'getr':
+                        ope = 'get'
+                        kwargs['python_dict'] = True
+                        kwargs['path'] = path
+                        kwargs['regex_flag'] = True
                     elif ope == 'del':
                         ope = 'delete'
                         kwargs['path'] = path
                     else:
                         kwargs['path'] = path
-                    if ope == 'geta':
-                        ope = 'get'
-                        kwargs['internal'] = True 
-                    if ope == 'pute':
-                        ope = 'put'
-                        kwargs['ephemeral'] = True
                     if version != '':
                         kwargs['version'] = version
                     try:
