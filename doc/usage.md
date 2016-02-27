@@ -79,6 +79,35 @@ r-b.b:
 
 ```
 
+###Transaction
+```
+tega CLI (q: quit, h:help)
+[tega: 0] begin
+txid: 3083e119-5272-4881-9493-1da2a2de3ac0 accepted
+[tega: 1] put r1
+x: 1
+y: 2
+
+[tega: 2] del r1.y
+[tega: 3] put r2
+x: 3
+y: 4
+
+[tega: 4] get r1
+400 Bad Request
+[tega: 5] get r2
+400 Bad Request
+[tega: 6] commit
+txid: 3083e119-5272-4881-9493-1da2a2de3ac0 commited
+[tega: 7] get r1
+{x: 1}
+
+[tega: 8] get r2
+{x: 3, y: 4}
+
+[tega: 9]
+```
+
 ###Messaging(pubsub)
 ```
 <<<At Terminal 1>>>
