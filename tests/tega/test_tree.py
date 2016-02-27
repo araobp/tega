@@ -12,6 +12,47 @@ class TestSequence(unittest.TestCase):
 
         pass
 
+    def test_iter(self):
+        r = tega.tree.Cont('r')
+        r.a = 1
+        r.b = 2
+        r.c = 3
+        attr_set = set([oid for oid in r])
+        self.assertEqual(set(['a', 'b', 'c']), attr_set)
+
+    def test_contains(self):
+        r = tega.tree.Cont('r')
+        r.a = 1
+        self.assertTrue('a' in r)
+        self.assertFalse('b' in r)
+
+    def test_call(self):
+        r = tega.tree.Cont('r')
+        r.a = 1
+        func = tega.tree.Func('id1', dict)
+        r.b = func
+
+        self.assertEqual(dict(x=1), r.b(x=1))
+        with self.assertRaises(TypeError):
+            r.a()
+
+    def test_items(self):
+        r = tega.tree.Cont('r')
+        r.a = 1
+        r.b = 2
+        d0 = dict(a=1, b=2)
+        d1 = {k: v for k, v in r.items()}
+        self.assertEqual(d0, d1)
+
+    def test_change(self):
+        r1 = tega.tree.Cont('r1')
+        r2 = tega.tree.Cont('r2')
+        r1.a = 1
+        r2.b = 2
+        r1.a.change_(r2)
+        self.assertEqual(['r2', 'a'], r1.a.qname_())
+        self.assertEqual(['r2', 'a'], r2.a.qname_())
+
     def test_wrapped_value(self):
         r = tega.tree.Cont('r')
         self.assertEqual(r._get_wrapped_type(int),

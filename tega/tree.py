@@ -40,13 +40,13 @@ class Cont(MutableMapping):
     #except:
     #    pass
     
-    def __init__(self, _oid=None, _parent=None, version=0):
+    def __init__(self, _oid=None, _parent=None, _version=0):
         '''
         _oid is a hashable object such as str, int or frozendict.
         '''
         self._setattr('_oid', _oid)
         self._setattr('_parent', _parent)
-        self._setattr('_version', version)
+        self._setattr('_version', _version)
         self._setattr('_frozen', False)
         self._setattr('_ephemeral', False)
 
@@ -163,21 +163,15 @@ class Cont(MutableMapping):
         if isinstance(self, RPC):
             return self._get_func()(*args, **kwargs)
         else:
-            return self.__getattr__(key)
-
-    def _freeze(self):
-        '''
-        Makes the self Cont object immutable.
-        '''
-        self._setattr('_frozen', True)
+            raise TypeError
 
     def freeze_(self):
         '''
         Makes the self Cont object immutable recursively (incl. all the
         children).
         '''
-        self._freeze()
-        for k,v in self.items():
+        self._setattr('_frozen', True)
+        for v in self.values():
             if isinstance(v, Cont):
                 v.freeze_()
 
@@ -197,16 +191,16 @@ class Cont(MutableMapping):
         else:
             return self
 
-    def qname_(self, qname=None):
+    def _qname(self):
+        if self._parent:
+            yield from self._parent._qname()
+        yield self._getattr('_oid')
+
+    def qname_(self):
         '''
         Returns Qualified Name (QName).
         '''
-        if qname == None:
-            qname = [] 
-        if self._parent:
-            qname = self._parent.qname_(qname)
-        qname.append(self._getattr('_oid'))
-        return qname 
+        return [oid for oid in self._qname()]
 
     def subtree_(self, path):
         '''
@@ -300,17 +294,14 @@ class Cont(MutableMapping):
         Returs an iterator(generator) excluding hidden keys (_*).
         '''
         for k in self.__dict__:
-            if not isinstance(k, str) or not k.startswith('_'):
+            if not k.startswith('_'):
                 yield k
 
     def __contains__(self, key):
         '''
         Returs True if key is in __dict__: 
         '''
-        if key in self.__dict__:
-            return True
-        else:
-            return False
+        return key in self.__dict__
 
     def _iter(self):
         '''
@@ -325,11 +316,8 @@ class Cont(MutableMapping):
         for Cont
         '''
         for k in self:
-            if not isinstance(k, str) or not k.startswith('_'):
-                if isinstance(k, dict):
-                    yield k, self(**k)
-                else:
-                    yield k, self.__dict__[k]
+            if not k.startswith('_'):
+                yield k, self.__dict__[k]
 
     def change_(self, to):
         '''
@@ -530,6 +518,7 @@ class Cont(MutableMapping):
             '_getattr': _getattr,
             '_setattr': _setattr,
             '_delattr': _delattr,
+            '_qname': _qname,
             'qname_': qname_,
             '_deepcopy_parents': _deepcopy_parents,
             'deepcopy_': _deepcopy_,

@@ -150,9 +150,9 @@ class ManagementRestApiHandler(tornado.web.RequestHandler):
                         self.write(json.dumps(data))
                         self.set_header('Content-Type', 'application/json')
                     else:
-                        raise tornado.web.HTTPError(404)
+                        raise tornado.web.HTTPError(404)  # Not Found(404)
             else:
-                raise tornado.web.HTTPError(404)
+                raise tornado.web.HTTPError(404)  # Not Found(404)
 
         elif cmd == 'cancel':
             txid = self.get_argument('txid', None)
@@ -160,16 +160,19 @@ class ManagementRestApiHandler(tornado.web.RequestHandler):
                 if txid in transactions:
                     del transactions[txid]
                 else:
-                    raise tornado.web.HTTPError(404)
+                    raise tornado.web.HTTPError(404)  # Not Found(404)
         elif cmd == 'commit':
             txid = self.get_argument('txid', None)
             with tx_lock:
                 if txid in transactions:
                     t = transactions[txid]['tx']
                     del transactions[txid]
-                    t.commit()
+                    try:
+                        t.commit()
+                    except ValueError:
+                        raise tornado.web.HTTPError(406)  # Not Acceptable(406)
                 else:
-                    raise tornado.web.HTTPError(404)
+                    raise tornado.web.HTTPError(404)  # Not Found(404)
         elif cmd == 'sync':
             if server_as_subscriber:
                 sync_check(server_as_subscriber.config,
@@ -254,7 +257,7 @@ class RestApiHandler(tornado.web.RequestHandler):
             self.set_header('Content-Type', 'application/json')
         except KeyError:
             logging.info('path "{}" not found in global idb'.format(path))
-            raise tornado.web.HTTPError(400)
+            raise tornado.web.HTTPError(404)  # Not Found(404)
 
     def put(self, id):
         '''
@@ -280,14 +283,14 @@ class RestApiHandler(tornado.web.RequestHandler):
                     t.put(cont, version=version, deepcopy=False,
                             ephemeral=ephemeral)
                 else:
-                    raise tornado.web.HTTPError(404)
+                    raise tornado.web.HTTPError(404)  # Not Found(404)
         else:
             with tx(subscriber=_tega_id2subscriber(tega_id)) as t:
                 try:
                     t.put(cont, version=version, deepcopy=False,
                             ephemeral=ephemeral)
                 except ValueError as e:
-                    raise tornado.web.HTTPError(409)
+                    raise tornado.web.HTTPError(409)  # Not Acceptible(409)
 
     def delete(self, id):
         '''
@@ -305,14 +308,14 @@ class RestApiHandler(tornado.web.RequestHandler):
                     t = transactions[txid]['tx']
                     t.delete(path, version=version)
                 else:
-                    raise tornado.web.HTTPError(404)
+                    raise tornado.web.HTTPError(404)  # Not Found(404)
         else:
             tega_id = self.get_argument('tega_id')
             with tx(subscriber=_tega_id2subscriber(tega_id)) as t:
                 try:
                     t.delete(path, version=version)
                 except ValueError as e:
-                    raise tornado.web.HTTPError(409)
+                    raise tornado.web.HTTPError(409)  # Not Acceptible(409)
 
 class PubSubHandler(tornado.websocket.WebSocketHandler):
     '''
@@ -535,7 +538,7 @@ class _SubscriberClient(object):
     '''
     def _send_subscribe(self, path, scope):
         if self.client:
-            self.client.write_message('SUBSCRIBE {} {}'.format(path,
+            self.client.write_message('SUBSCRIBE {} {} False'.format(path,
                                        scope.value))
         else:
             raise Exception('no websocket client set')

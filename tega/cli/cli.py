@@ -246,7 +246,7 @@ def process_cmd(tornado_loop=False):
                         kwargs['path'] = path
                     else:
                         kwargs['path'] = path
-                    if version != '':
+                    if version:
                         kwargs['version'] = version
                     try:
                         _data = getattr(driver, ope)(**kwargs)

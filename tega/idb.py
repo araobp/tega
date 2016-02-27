@@ -343,12 +343,10 @@ class tx:
         instance._setattr(VERSION, version)
         if isinstance(instance, Cont):
             for k,v in instance.items():
-                if type(k) == str and not k.startswith('_'):
-                    if isinstance(v, Cont):
-                        self._instance_version_set(v, version)
-                    else:
-                        v._setattr(VERSION, version)
-
+                if isinstance(v, Cont):
+                    self._instance_version_set(v, version)
+                else:
+                    v._setattr(VERSION, version)
 
     def _copy_on_write(self, qname, above_tail=False):
         '''
@@ -425,7 +423,7 @@ class tx:
 
             tail._setattr(VERSION, new_version)
             
-        return (prev_version, new_version, new_root, tail, redirection)
+        return prev_version, new_version, new_root, tail, redirection
 
     def commit(self, write_log=True):
         '''
@@ -662,7 +660,7 @@ class tx:
                 for regex_oid in sub_qname:
                     for oid in instance:
                         # TODO: regex matching multiple children
-                        if not oid.startswith('_') and re.match(regex_oid, oid):
+                        if re.match(regex_oid, oid):
                             instance = instance[oid]
                             path += '.' + oid
                         else:

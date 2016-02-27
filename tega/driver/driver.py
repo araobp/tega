@@ -18,7 +18,7 @@ PUT = OPE.PUT.name
 GET = OPE.GET.name 
 DELETE = OPE.DELETE.name 
 
-def _build_urlencode(base_url):
+def _make_urlencode(base_url):
     def _urlencode(path_, **kwargs):
         _kwargs = {}
         if kwargs:
@@ -36,34 +36,37 @@ class TransactionException(Exception):
     '''
     Transaction exception
     '''
-
-    def __init__(self, reason):
-        self.reason = reason
+    def __init__(self, *, response=None, message=None):
+        response_msg = msg = ''
+        if response:
+            response_msg = '{} {}'.format(response.status, response.reason)
+        if message:
+            msg = '\n' + message
+        self.message = response_msg + msg
 
     def __str__(self):
-        return self.reason
+        return self.message
 
 class CRUDException(Exception):
     '''
     CRUD exception
     '''
-
-    def __init__(self, reason):
-        self.reason = reason
+    def __init__(self, response):
+        self.message = '{} {}'.format(response.status, response.reason)
 
     def __str__(self):
-        return self.reason
+        return self.message
 
 class SubscriptionException(Exception):
     '''
     Subscription exception
     '''
 
-    def __init__(self, reason):
-        self.reason = reason
+    def __init__(self, response):
+        self.message = '{} {}'.format(response.status, response.reason)
 
     def __str__(self):
-        return self.reason
+        return self.message
 
 class Driver(object):
     '''
@@ -88,7 +91,7 @@ class Driver(object):
         self._tega_id = tega_id 
         self.client = None
         self.parser = build_parser('driver')
-        self._urlencode = _build_urlencode(self.base_url)
+        self._urlencode = _make_urlencode(self.base_url)
     
         if subscriber:
             self.subscriber = subscriber
@@ -125,8 +128,7 @@ class Driver(object):
         response, body = self.conn.request(self._cmdencode(cmd, **kwargs),
                                            POST, None, HEADERS)
         if response.status >=300 or response.status < 200:
-            raise CRUDException('{} {}'.format(
-                response.status, response.reason))
+            raise CRUDException(response=response)
         else:
             return (response, body)
 
@@ -175,8 +177,7 @@ class Driver(object):
 
     def _response_check(self, response):
         if response.status >= 300 or response.status < 200:
-            raise CRUDException('{} {}'.format(
-                response.status, response.reason))
+            raise CRUDException(response=response)
 
     def put(self, instance, version=None, ephemeral=False):
         '''
@@ -209,7 +210,7 @@ class Driver(object):
 
         response, body = self.conn.request(url, GET, None, HEADERS)
         if response.status >= 300 or response.status < 200:
-            raise CRUDException('{} {}'.format(response.status, response.reason))
+            raise CRUDException(response=response)
 
         dict_data = json.loads(body.decode('utf-8'))
         if python_dict:
@@ -231,11 +232,9 @@ class Driver(object):
                 return self.txid 
             else:
                 # TODO: rest.py should return different status code for errors
-                raise TransactionException(
-                        'status code: {}'.format(response.status))
+                raise TransactionException(response=response)
         else:
-            raise TransactionException(
-                    'id: {} not commited yet!'.format(self.txid))
+            raise TransactionException(message='id: {} not commited yet!'.format(self.txid))
 
     def cand(self, internal=False, python_dict=False):
         '''
@@ -251,7 +250,7 @@ class Driver(object):
             else:
                 return dict2cont(json_data)
         else:
-            raise TransactionException('no ongoing transaction')
+            raise TransactionException(message='no ongoing transaction')
 
     def cancel(self):
         txid = self.txid
@@ -259,13 +258,15 @@ class Driver(object):
             url = self._cmdencode('cancel', txid=txid)
             response, body = self.conn.request(url, POST, None, HEADERS)
             status = response.status
+            reason = response.reason
             if status == 200:
                 self.txid = None
                 return txid
             else:
-                raise TransactionException('id: {} expired'.format(txid))
+                raise TransactionException(response=response,
+                        message='id: {} expired'.format(txid))
         else:
-            raise TransactionException('no ongoing transaction')
+            raise TransactionException(message='no ongoing transaction')
 
     def commit(self):
         txid = self.txid
@@ -273,28 +274,27 @@ class Driver(object):
             url = self._cmdencode('commit', txid=txid)
             response, body = self.conn.request(url, POST, None, HEADERS)
             status = response.status
+            reason = response.reason
             self.txid = None
             if status == 200:
                 return txid 
             else:
-                raise TransactionException('id: {} expired'.format(txid))
+                raise TransactionException(response=response,
+                        message='id: {} rejected'.format(txid))
         else:
             raise TransactionException('no ongoing transaction')
 
-    def _send(self, cmd, qs=None, message=None):
+    def _send(self, cmd, args=None, message=None):
         if self.client:
-            _qs = ''
-            if qs:
-                _qs = ' '.join(qs)
-            if message and _qs:
-                self.client.write_message('{} {}\n{}'.
-                        format(cmd, _qs, message))
-            elif _qs:
-                self.client.write_message('{} {}'.format(cmd, _qs))
+            if message and _args:
+                self.client.write_message('{}\n{}'.
+                        format(' '.join(cmd, *_args), message))
+            elif _args:
+                self.client.write_message(' '.join(cmd, *_args))
             else:
-                self.client.write_message('{}'.format(cmd))
+                self.client.write_message(cmd)
         else:
-            raise SubscriptionException('No subscriber client set')
+            raise SubscriptionException(message='No subscriber client set')
 
     def rpc(self, func_path, *args, **kwargs):
         '''
@@ -329,10 +329,10 @@ class Driver(object):
         else:
             scope = SCOPE.LOCAL.value
 
-        self._send(cmd='SESSION', qs=[self.tega_id, scope])
+        self._send(cmd='SESSION', args=[self.tega_id, scope])
 
         message = yield self.client.read_message()
-        cmd, qs, body = self.parser(message)
+        cmd, args, body = self.parser(message)
         assert(cmd == 'SESSIONACK')
         self.subscriber.on_init()
 
@@ -340,32 +340,32 @@ class Driver(object):
             message = yield self.client.read_message()
             if not message:  # TODO: "WebSocket is disconnected" handler
                 break
-            cmd, qs, body = self.parser(message)
+            cmd, args, body = self.parser(message)
             if cmd == 'NOTIFY':
                 self.subscriber.on_notify(body)
             elif cmd == 'MESSAGE':
-                channel = qs[0]
-                tega_id = qs[1]
+                channel = args[0]
+                tega_id = args[1]
                 self.subscriber.on_message(channel, tega_id, body['message'])
 
     def publish(self, channel, message):
         '''
         Publishes a message to subscribers.
         '''
-        self._send(cmd='PUBLISH', qs=[channel],
+        self._send(cmd='PUBLISH', args=[channel],
                 message=json.dumps(dict(message=message)))
 
     def subscribe(self, path, scope=SCOPE.LOCAL, regex_flag=False):
         '''
         Sends SUBSCRIBE to tega REST server.
         '''
-        self._send(cmd='SUBSCRIBE', qs=[path, scope.value, str(regex_flag)])
+        self._send(cmd='SUBSCRIBE', args=[path, scope.value, str(regex_flag)])
 
     def unsubscribe(self, path, regex_flag=False):
         '''
         Sends UNSUBSCRIBE to tega REST server.
         '''
-        self._send(cmd='UNSUBSCRIBE', qs=[path, str(regex_flag)])
+        self._send(cmd='UNSUBSCRIBE', args=[path, str(regex_flag)])
 
     def unsubscribe_all(self):
         '''
