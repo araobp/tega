@@ -138,7 +138,7 @@ $ ./cli
 ###RPC routing
 ![rpc routing](https://docs.google.com/drawings/d/1GHHYrF3s0MRypT_SxHkDAT-aFTfCtMh9NkqQrVEtvqo/pub?w=600&h=480)
 
-####Integration patterns
+###Integration patterns
 ![integration patterns](https://docs.google.com/drawings/d/1CkqZxVHghA-9UuZ33ZHENcABnyHld5PtPw1CWY9LCJ8/pub?w=600&h=480)
 
 For example,
