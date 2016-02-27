@@ -79,6 +79,73 @@ r-b.b:
 
 ```
 
+###Transaction
+```
+tega CLI (q: quit, h:help)
+[tega: 0] begin
+txid: 3083e119-5272-4881-9493-1da2a2de3ac0 accepted
+[tega: 1] put r1
+x: 1
+y: 2
+
+[tega: 2] del r1.y
+[tega: 3] put r2
+x: 3
+y: 4
+
+[tega: 4] get r1
+400 Bad Request
+[tega: 5] get r2
+400 Bad Request
+[tega: 6] commit
+txid: 3083e119-5272-4881-9493-1da2a2de3ac0 commited
+[tega: 7] get r1
+{x: 1}
+
+[tega: 8] get r2
+{x: 3, y: 4}
+
+[tega: 9]
+```
+
+###Transaction with collision detection
+```
+<<<At Terminal 1>>>
+tega CLI (q: quit, h:help)
+[tega: 0] put r
+a: 1
+b: 2
+
+[tega: 1] put r.b
+3
+
+[tega: 2] geta r.b
+{_ephemeral: false, _oid: b, _parent: r, _value: 3, _version: 1}
+
+[tega: 3] begin
+txid: 0fba7dcb-2347-44f3-9d88-0ccfb0770ef2 accepted
+[tega: 4] put r.b 1
+4
+
+[tega: 5] commit
+406 Not Acceptable
+id: 0fba7dcb-2347-44f3-9d88-0ccfb0770ef2 rejected
+
+<<<At Terminal 2>>>
+tega CLI (q: quit, h:help)
+[tega: 0] geta r.b
+{_ephemeral: false, _oid: b, _parent: r, _value: 3, _version: 1}
+
+[tega: 1] begin
+txid: ffeb8969-f6a2-4100-8ee7-f113dd7eff68 accepted
+[tega: 2] put r.b 1
+5
+
+[tega: 3] commit
+txid: ffeb8969-f6a2-4100-8ee7-f113dd7eff68 commited
+
+```
+
 ###Messaging(pubsub)
 ```
 <<<At Terminal 1>>>
