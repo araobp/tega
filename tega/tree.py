@@ -238,15 +238,17 @@ class Cont(MutableMapping):
         '''
         _oid = self._getattr('_oid')
         obj = Cont(_oid, _parent=new_parent)
+        obj_setattr = obj._setattr
+        deepcopy = copy.deepcopy
 
         # Deepcopies the subtree
         for k,v in self.__dict__.items():
             if k == '_parent' or k == '_frozen':
                 pass  # These attributes are set in __init__().
             elif isinstance(v, Cont) or self.is_wrapped(v):
-                obj._setattr(k, v.deepcopy_(new_parent=obj))
+                obj_setattr(k, v.deepcopy_(new_parent=obj))
             else:
-                obj._setattr(k, copy.deepcopy(v))
+                obj_setattr(k, deepcopy(v))
 
         # Deepcopies the parents 
         self._deepcopy_parents(obj)

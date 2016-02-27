@@ -108,7 +108,7 @@ class WebSocketSubscriber(Subscriber):
 
     def on_message(self, channel, tega_id, message):
         self.tornado_websocket.write_message('MESSAGE {} {}\n{}'.
-                format(channel, tega_id, json.dumps(dict(message=message))))
+                format(channel, tega_id, json.dumps({'message': message})))
 
     def write_message(self, data):
         self.tornado_websocket.write_message(data)

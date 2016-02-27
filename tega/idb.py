@@ -290,10 +290,16 @@ def log_entry(ope, path, tega_id, instance, backto=None):
     Log entry
     '''
     if backto:
-        return dict(ope=ope, path=path, tega_id=tega_id, instance=instance,
-                backto=backto)
+        return {'ope': ope,
+                'path': path,
+                'tega_id': tega_id,
+                'instance': instance,
+                'backto': backto}
     else:
-        return dict(ope=ope, path=path, tega_id=tega_id, instance=instance)
+        return {'ope': ope,
+                'path': path,
+                'tega_id': tega_id,
+                'instance': instance}
 
 def old_roots_deque():
     return collections.deque(maxlen=old_roots_len)
@@ -341,10 +347,11 @@ class tx:
         Sets "version" to the instance recursively.
         '''
         instance._setattr(VERSION, version)
+        instance_version_set = self._instance_version_set
         if isinstance(instance, Cont):
             for k,v in instance.items():
                 if isinstance(v, Cont):
-                    self._instance_version_set(v, version)
+                    instance_version_set(v, version)
                 else:
                     v._setattr(VERSION, version)
 
@@ -432,6 +439,10 @@ class tx:
         Note: since this data base is based on Tornado/coroutine,
         this commit function never interrupted by another process or thread.
         '''
+
+        global _log_fd
+        write = _log_fd.write
+
         for crud in self.crud_queue:
             func = crud[0]
             crud[0](*crud[1:])
@@ -443,8 +454,8 @@ class tx:
                     _log_fd.write(COMMIT_START_MARKER+'\n')  # commit start
                     for log in self.commit_queue:
                         log = str(log)
-                        _log_fd.write(log+'\n')
-                    _log_fd.write(finish_marker+'\n')  # commit finish marker
+                        write(log+'\n')
+                    write(finish_marker+'\n')  # commit finish marker
                     _log_fd.flush()
                     os.fsync(_log_fd)
 
@@ -852,6 +863,10 @@ def reload_log():
     '''
     Reloads log to reorganize a tree in idb
     '''
+    PUT = OPE.PUT
+    DELETE = OPE.PUT
+    SS = OPE.SS
+
     t = None 
     multi = []
 
@@ -864,16 +879,18 @@ def reload_log():
         elif line.startswith(COMMIT_FINISH_MARKER) and len(multi) > 0:
             timestamp = _timestamp(line)
             t = tx()
+            put = t.put
+            delete = t.delete
             for crud in multi:
                 ope = crud[0]
-                if ope == OPE.PUT:
+                if ope == PUT:
                     instance = crud[1]
                     tega_id = crud[2]
-                    t.put(instance, tega_id=tega_id, deepcopy=False)
-                elif ope == OPE.DELETE:
+                    put(instance, tega_id=tega_id, deepcopy=False)
+                elif ope == DELETE:
                     path = crud[1]
                     tega_id = crud[2]
-                    t.delete(path, tega_id=tega_id)
+                    delete(path, tega_id=tega_id)
             t.commit(write_log=False)
             del multi[:]
         elif line.startswith(COMMIT_FINISH_MARKER):
@@ -886,15 +903,15 @@ def reload_log():
             path = log['path']
             instance = log['instance']
             tega_id = log['tega_id']
-            if ope == OPE.PUT.name:
+            if ope == PUT.name:
                 if path:
                     root = subtree(path, instance)
                 else:
                     root = dict2cont(instance)
-                multi.append((OPE.PUT, root, tega_id))
-            elif ope == OPE.DELETE.name:
-                multi.append((OPE.DELETE, path, tega_id))
-            elif ope == OPE.SS.name:
+                multi.append((PUT, root, tega_id))
+            elif ope == DELETE.name:
+                multi.append((DELETE, path, tega_id))
+            elif ope == SS.name:
                 root_oid = instance['_oid']
                 root = deserialize(instance)
                 _idb[root_oid] = root
