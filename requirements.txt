@@ -1,0 +1,4 @@
+tornado==4.3b1
+httplib2==0.9.2
+pyyaml==3.11
+readline==6.2.4.1
