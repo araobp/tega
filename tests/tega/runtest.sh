@@ -1,4 +1,4 @@
-DIR='./tests/tega'
+DIR=`pwd`
 python $DIR/test_tree.py
 python $DIR/test_util.py
 python $DIR/test_idb.py
