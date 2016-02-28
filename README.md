@@ -1,5 +1,7 @@
 #tega db
 
+![travis](https://travis-ci.org/araobp/tega.svg?branch=master)
+
 Project start: 2014/8/8
 
 ![tega_idb](./doc/output_3_0.png)
