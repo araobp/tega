@@ -291,9 +291,9 @@ def main():
     usage = 'usage: %prog [options] file'
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--address",
-            help="REST API server host name or IP address",
+            help="tega server host name or IP address",
             type=str, default=HOST)
-    parser.add_argument("-p", "--port", help="REST API server port number",
+    parser.add_argument("-p", "--port", help="tega server port number",
             type=int, default=PORT)
     parser.add_argument("-t", "--tegaid", help="tega ID", type=str,
             default=str(uuid.uuid4()))

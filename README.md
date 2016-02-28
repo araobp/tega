@@ -15,7 +15,7 @@ Distributed document-oriented database for small PCs (incl. Raspberry Pi), writt
 - Python and Go driver
 - Easy to use
 ```
-$ ./cli
+$ tega-cli
 tega CLI (q: quit, h:help)
 [tega: 0] put a.b.c
 1
@@ -48,39 +48,29 @@ x: 2
 
 ![Deployment](https://docs.google.com/drawings/d/16z8YFQztsGXWacq8fWyVzs85UTjZqllIs-hGGwav9GY/pub?w=640&h=480)
 
-##Try it out
+##Installation
+
 You need to have python3.5 installed on your Debian/Ubuntu Linux.
 
 ```
-$ cd
+$ pip install tornado
+$ pip install httplib2
+$ pip install pyyaml
+$ pip install readline
 $ git clone http://github.com/araobp/tega
-$ pip3.5 install tornado
-$ pip3.5 install httplib2
-$ pip3.5 install pyyaml
-$ pip3.5 install readline
-$ mkdir tega/scripts/var
+$ cd tega
+$ python setup.py install
 ```
 
-Append the following line to your ~/.bashrc
-```
-export PYTHONPATH=$PYTHONPATH:$HOME/tega
-```
-
-Start tega server like this:
+Start tega server with sample options, like this:
 ```
 $ cd tega/scripts
 $ ./global
 ```
 
-Python3.4 users also require the following package:
+And start tega CLI to use CLI commands:
 ```
-$ pip3 install backports_abc
-```
-
-Test tega CLI:
-```
-$ cd tega/scripts
-$ ./cli
+$ tega-cli
 ```
 
 

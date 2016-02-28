@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
-./server -p 8888 -d ./var -t global -e ../plugins/global -L WARNING
+tega-server -p 8888 -d ./var -t global -e ../plugins/global -L WARNING
 

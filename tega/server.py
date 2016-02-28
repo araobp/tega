@@ -30,8 +30,8 @@ import yaml
 transactions = {}
 tx_lock = RLock()
 
-mhost = None
-mport = None
+ghost = None
+gport = None
 sync_path = None
 server_as_subscriber = None
 server_tega_id = None
@@ -521,9 +521,9 @@ class _SubscriberClient(object):
 
     '''
 
-    def __init__(self, mhost, mport, config, operational, server_tega_id):
-        self.mhost = mhost
-        self.mport = mport
+    def __init__(self, ghost, gport, config, operational, server_tega_id):
+        self.ghost = ghost
+        self.gport = gport
         self.config = config 
         self.operational = operational 
         self.server_tega_id = server_tega_id
@@ -552,7 +552,7 @@ class _SubscriberClient(object):
             try:
                 # Connects to global idb
                 self.client = yield tornado.websocket.websocket_connect(
-                        WEBSOCKET_PUBSUB_URL.format(self.mhost, self.mport))
+                        WEBSOCKET_PUBSUB_URL.format(self.ghost, self.gport))
 
                 # Sets WebSocketSubscriber to self
                 self.subscriber = WebSocketSubscriber(SCOPE.GLOBAL, self.client)
@@ -663,32 +663,32 @@ class _SubscriberClient(object):
 
 def main():
 
-    global mhost, mport, sync_path, server_as_subscriber, server_tega_id, plugins
+    global ghost, gport, sync_path, server_as_subscriber, server_tega_id, plugins
 
     logging.basicConfig(
             level=logging.DEBUG,
             format='%(levelname)s:%(asctime)s:%(message)s')
     usage = 'usage: %prog [options] file'
     parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--datadir", help="tega DB data directory",
+    parser.add_argument("-d", "--logdir", help="directory of tega commit-log files",
                         type=str, default=DATA_DIR)
-    parser.add_argument("-p", "--port", help="REST API server port", type=int,
-                        default=PORT)
-    parser.add_argument("-H", "--mhost",
-            help="Global idb REST API server host name or IP address", type=str,
-            default=None)
-    parser.add_argument("-P", "--mport", help="Global idb REST API server port",
-                        type=int, default=None)
-    parser.add_argument("-C", "--config",
-            help="Root object IDs of config trees", type=str, nargs='*', default=None)
-    parser.add_argument("-O", "--operational",
-            help="Root object IDs of operational trees", type=str, nargs='*', default=None)
     parser.add_argument("-t", "--tegaid", help="tega ID", type=str,
             default=str(uuid.uuid4()))
-    parser.add_argument("-e", "--extensions", help="Directory of tega plugins",
+    parser.add_argument("-p", "--port", help="tega server port", type=int,
+                        default=PORT)
+    parser.add_argument("-H", "--ghost",
+            help="global tega server host name or IP address", type=str,
+            default=None)
+    parser.add_argument("-P", "--gport", help="global tega server port",
+                        type=int, default=None)
+    parser.add_argument("-C", "--config",
+            help="root object IDs of config trees", type=str, nargs='*', default=None)
+    parser.add_argument("-O", "--operational",
+            help="root object IDs of operational trees", type=str, nargs='*', default=None)
+    parser.add_argument("-e", "--extensions", help="directory of tega plugins",
             type=str, default=None)
-    parser.add_argument("-l", "--maxlen", help="The number of old roots kept in idb", type=int, default=tega.idb.OLD_ROOTS_LEN)
-    parser.add_argument("-L", "--loglevel", help="Logging level", type=str,
+    parser.add_argument("-l", "--maxlen", help="the number of old roots kept in idb", type=int, default=tega.idb.OLD_ROOTS_LEN)
+    parser.add_argument("-L", "--loglevel", help="logging level", type=str,
             default='INFO')
 
     args = parser.parse_args()
@@ -701,20 +701,27 @@ def main():
         args.config,
         args.operational))
 
-    if args.config:
-        if not args.mhost or not args.mport:
-            print('All --mhost, --mport and --config options MUST be specified')
+    if args.config or args.operational:
+        if not args.ghost or not args.gport:
+            print('"--config" and "--operational" options also require "--gport" (and "--ghost" if global tega server runs on a different host)')
             sys.exit(1)
         else:
-            mhost = args.mhost
-            mport = args.mport
+            ghost = args.ghost
+            gport = args.gport
+
+    print(args)
+    print('')
 
     # idb initialization
-    print(args)
-    tega.idb.start(args.datadir, server_tega_id, args.maxlen)  # idb start
+    try:
+        tega.idb.start(args.logdir, server_tega_id, args.maxlen)  # idb start
+    except FileNotFoundError:
+        print('{} not found'.format(args.logdir))
+        print('hint: create {} directory'.format(args.logdir))
+        sys.exit(1)
 
     # Reloads previous logs from tega db file
-    logging.info('Reloading log from {}...'.format(args.datadir))
+    logging.info('Reloading log from {}...'.format(args.logdir))
     tega.idb.reload_log()  # reloads tega-db log
     logging.info('Reloading done')
 
@@ -740,9 +747,9 @@ def main():
         tornado.ioloop.PeriodicCallback(transaction_gc,
                 TRANSACTION_GC_PERIOD * 1000).start()
         
-        if args.mhost and args.mport and args.config:
+        if args.ghost and args.gport and args.config:
             server_as_subscriber = _SubscriberClient(
-                    args.mhost, args.mport, args.config, args.operational,
+                    args.ghost, args.gport, args.config, args.operational,
                     server_tega_id)
             tornado.ioloop.IOLoop.current().run_sync(
                     server_as_subscriber.subscriber_loop)

@@ -2,4 +2,4 @@
 
 PLUGINS=../../plugins/local1
 
-$1/server -p 8889 -d $1 -H localhost -P 8888 -C inventory.ne1 -t local1 -e $PLUGINS
+tega-server -p 8889 -d $1 -H localhost -P 8888 -C inventory.ne1 -t local1 -e $PLUGINS

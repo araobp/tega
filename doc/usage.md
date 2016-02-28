@@ -149,7 +149,7 @@ txid: ffeb8969-f6a2-4100-8ee7-f113dd7eff68 commited
 ###Messaging(pubsub)
 ```
 <<<At Terminal 1>>>
-$ ./cli -s
+$ tega-cli -s
 tega CLI (q: quit, h:help)
 [tega: 0] --- session ready ---
 [tega: 1] subscribe ch1
@@ -161,7 +161,7 @@ tega_id: 4b13cc27-a301-47e8-a88d-1fe36ea4ba42
 Good Morning!
 
 <<<At Terminal 2>>
-$ ./cli -s
+$ tega-cli -s
 tega CLI (q: quit, h:help)
 [tega: 0] --- session ready ---
 [tega: 1] publish ch1
@@ -172,7 +172,7 @@ Good Morning!
 ###Messaging(pubsub) with regular expressions
 ```
 <<<At Terminal 1>>
-$ ./cli -s
+$ tega-cli -s
 tega CLI (q: quit, h:help)
 [tega: 0] --- session ready ---
 [tega: 1] subr r-\w*\.a       
@@ -188,7 +188,7 @@ d79feb02-3a81-4e7e-b37d-92dafc1f0a94: [r-\w*\.a]
 [{'instance': 'YYY', 'tega_id': None, 'ope': 'PUT', 'path': 'r-b.a.x'}]
 
 <<<At Terminal 2>>
-$ ./cli
+$ tega-cli
 tega CLI (q: quit, h:help)
 [tega: 0] put r-a.a.x
 XXX
@@ -201,7 +201,7 @@ YYY
 ###Manipulating ephemeral nodes
 ```
 <<<At Terminal 1>>>
-$ ./cli -s
+$ tega-cli -s
 tega CLI (q: quit, h:help)
 [tega: 0] --- session ready ---
 [tega: 1] subscribe a.b
@@ -214,7 +214,7 @@ tega CLI (q: quit, h:help)
 [tega: 4] 
 
 <<<At Termianl 2>>>
-$ ./cli -s
+$ tega-cli -s
 tega CLI (q: quit, h:help)
 [tega: 0] --- session ready ---
 [tega: 1] pute a.b.c
@@ -229,7 +229,7 @@ x: 2
 
 [tega: 4] q
 
-$ ./cli -s
+$ tega-cli -s
 tega CLI (q: quit, h:help)
 [tega: 0] --- session ready ---
 [tega: 1] get a
@@ -238,7 +238,7 @@ tega CLI (q: quit, h:help)
 
 ###Taking a snapshot
 ```
-$ ./cli
+$ tega-cli
 tega CLI (q: quit, h:help)
 [tega: 0] put a.b.c
 1

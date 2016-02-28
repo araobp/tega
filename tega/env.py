@@ -21,7 +21,7 @@ WEBSOCKET_PUBSUB_URL = 'ws://{}:{}/_pubsub'
 CONNECT_RETRY_TIMER = 5
 
 # Directory for log and snapshot files
-DATA_DIR = '~/tega/var'
+DATA_DIR = './var'
 
 # tega logo
 LOGO = '''

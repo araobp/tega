@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
-./global -p 8891 -d ~/tega/var/homenet.db -H localhost -P 8888 -S inventory.homenet -s -t homenet -e ~/tega/plugins/homenet
+tega-server -p 8891 -d ~/tega/var/homenet.db -H localhost -P 8888 -S inventory.homenet -s -t homenet -e ~/tega/plugins/homenet
 

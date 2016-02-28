@@ -76,7 +76,10 @@ def start(data_dir, tega_id, maxlen=OLD_ROOTS_LEN):
     num = commit_log_number(server_tega_id, _log_dir)
     filename = _commit_log_filename(server_tega_id, num)
     log_file = os.path.join(_log_dir, filename)
-    _log_fd = open(log_file, 'a+')  # append-only file
+    try:
+        _log_fd = open(log_file, 'a+')  # append-only file
+    except FileNotFoundError:
+        raise
     old_roots_len = maxlen
 
 def is_started():

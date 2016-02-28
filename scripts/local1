@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
-./server -p 8889 -d ./var -H localhost -P 8888 -C config-local1 ip-local1 -O operational-local1 -t local1 -e ../plugins/local1
+tega-server -p 8889 -d ./var -H localhost -P 8888 -C config-local1 ip-local1 -O operational-local1 -t local1 -e ../plugins/local1
 
