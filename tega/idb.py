@@ -723,6 +723,8 @@ def _select(original, regex_qname, regex_groups):
             if g:
                 regex_groups_ = copy.copy(regex_groups)
                 regex_groups_.append(g)
+            else:
+                regex_groups_ = regex_groups
             if isinstance(original, Cont) and len(regex_qname) > 1:
                 yield from _select(v, regex_qname[1:], regex_groups_)
             else:
