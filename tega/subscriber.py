@@ -130,11 +130,11 @@ class PlugIn(Subscriber):
         '''
         tega.idb.unsubscribe(self, path, regex_flag)
 
-    def get(self, path, version=None):
+    def get(self, path, version=None, regex_flag=False):
         '''
         Calls tega.idb.get().
         '''
-        return tega.idb.get(path, version)
+        return tega.idb.get(path, version, regex_flag)
 
 def plugins(plugin_path):
     '''
