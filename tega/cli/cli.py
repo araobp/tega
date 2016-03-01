@@ -27,7 +27,7 @@ operations = '|'.join(['get', 'getr', 'geta', 'put', 'pute', 'del',
     'unsub', 'unsubr', 'pub'])
 cmd_pattern = re.compile('^(' + operations +
         r')\s+([\(\)\[\]=\-,\.\w\*\\]+)\s*(-*\d*)$|^(rollback)\s+([\w\-]+)\s+(-\d*)$')
-rpc_pattern = re.compile('^[\.\w]+\([\w\s\'\"\,\.\/=-]*\)$')
+rpc_pattern = re.compile('^[\.\w\-]+\([\w\s\'\"\,\.\/=-]*\)$')
 
 HELP = '''
 [Database management] (M)andatory, (O)ptional
