@@ -34,9 +34,11 @@ x: 2
 - Simplicity rather than high-performance and rigid schema
 - NOSQL for non big data (small data)
 - Embeddable data base
-- Focus on config data management
+- Focus on config and operational data management
+- Support various integration patterns: data change notification, messaging and rpc
 - Easy-to-use APIs
 - Concurrenty support with coroutine
+- NAT/HTTP-Proxy traversal: REST and WebSocket
 
 ##Project goal
 ![goal](https://docs.google.com/drawings/d/1CVeMUwvrKnbgvjriW0ftwnIMtjiMDlDMCEN0tPTSujs/pub?w=640&h=480)
@@ -157,6 +159,8 @@ it is a schema-less database and the performance (especially write-performance) 
 * [ZooKeeper](https://www.usenix.org/legacy/event/atc10/tech/full_papers/Hunt.pdf)
 * [Cassandra](http://wiki.apache.org/cassandra/ArticlesAndPresentations)
 * [Hazelcast](https://hazelcast.org/)
-* [OVSDB(RFC7047)](https://tools.ietf.org/html/rfc7047)
 * [YANG(RFC6020)](https://tools.ietf.org/html/rfc6020)
 * [OpenDaylight MD-SAL datastore](https://wiki.opendaylight.org/view/OpenDaylight_Controller:MD-SAL:Architecture:DOM_DataStore)
+* [OpenWRT UCI](https://wiki.openwrt.org/doc/uci)
+* [Session Initiation Protocol(RFC3261)](https://www.ietf.org/rfc/rfc3261.txt)
+* [OVSDB(RFC7047)](https://tools.ietf.org/html/rfc7047)

@@ -19,7 +19,7 @@ config-<router>.<service_module or rpc>.<args/kwargs>
        | | |                             depending on your implementations.
    +---+ | +------+
    |     |        |
-[cmd0][cmd1]...[cmdn] - - - operations at each commands are atomic
+[cmd0][cmd1]...[cmdn] - - - operations at each commands are atomic (such as "ip", "brctl", ...)
 ```
 
 But, for read-only data, you may have many-tier tree structure.
