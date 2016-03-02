@@ -262,8 +262,8 @@ class Cont(MutableMapping):
         obj = self.__class__() # Cont
         for k,v in self.__dict__.items():
             obj._setattr(k, v)
-            if freeze:
-                obj.freeze_()
+        if freeze:
+            obj._setattr('_frozen', True)
         return obj
 
     def merge_(self, instance, _version=None):

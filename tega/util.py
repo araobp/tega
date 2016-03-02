@@ -127,21 +127,6 @@ def deserialize(dict_):
 
 _quoted_arg_matcher = re.compile('\s*([\'\"]+[\w\s\.\/-]*[\'\"]+)\s*')
 
-def copy_and_childref(cont):
-    '''
-    Returns its "shallow" copy and references to its children
-    '''
-    #obj = cont.__class__()  # Cont
-    obj = Cont()
-    childref = []
-    for k,v in cont.__dict__.items():
-        obj._setattr(k ,v)
-        if isinstance(obj, Cont):
-            obj.freeze_()
-        if not k.startswith('_'):
-            childref.append(v)
-    return (obj, childref)
-
 def align_vector(cont):
     '''
     Aligns references between parents and children
@@ -151,6 +136,18 @@ def align_vector(cont):
         child._setattr('_parent', cont)
         if isinstance(child, Cont):
             align_vector(child)
+
+def align_vector2(cont, version):
+    '''
+    Aligns references between parents and children
+    with older versions
+    '''
+    for k in cont:
+        child = cont[k]
+        if child._version != version:
+            child._setattr('_parent', cont)
+        elif isinstance(child, Cont):
+            align_vector2(child, version)
 
 def _edge(qname, version):
     return '{}({})'.format('.'.join(qname), version)

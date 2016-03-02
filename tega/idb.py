@@ -1,7 +1,7 @@
 from tega.subscriber import SCOPE
 from tega.messaging import request, REQUEST_TYPE
 from tega.tree import Cont, RPC
-from tega.util import path2qname, qname2path, dict2cont, subtree, deserialize, copy_and_childref, align_vector, commit_log_number, readline_reverse, edges, nested_regex_path
+from tega.util import path2qname, qname2path, dict2cont, subtree, deserialize, align_vector, align_vector2, commit_log_number, readline_reverse, edges, nested_regex_path
 
 import copy
 import collections
@@ -380,11 +380,9 @@ class tx:
                   (C)        - extend ->
        
         '''
-        original = _idb
         new_root = None
         tail = None
         root = None
-        redirection = None 
         go = False
         no_copy = False
         prev_version = -1
@@ -392,18 +390,17 @@ class tx:
         root_oid = qname[0]
 
         if root_oid in self.candidate:  # copy already exists
-            prev_version, new_version, root, redirection = self.candidate[root_oid]
+            prev_version, new_version, root = self.candidate[root_oid]
             new_root = root
             go = True
             no_copy = True  # operations performed on the copy
-        elif not root_oid in original:  # the root does not exist in _idb  
+        elif not root_oid in _idb:  # the root does not exist in _idb  
             new_root = Cont(root_oid)
         else:  # the root exists in _idb but its copy is not in self.candidate
-            root = original[root_oid]
+            root = _idb[root_oid]
             prev_version = root._getattr(VERSION)
             new_version = prev_version + 1
-            new_root, childref = copy_and_childref(root)
-            redirection = [(root, childref)]
+            new_root = root.copy_(freeze=True)
             go = True
 
         original = root
@@ -422,8 +419,7 @@ class tx:
                     if no_copy:
                         tail = original
                     else:
-                        tail, childref = copy_and_childref(original)
-                        redirection.append((original, childref))
+                        tail = original.copy_(freeze=True)
                     tail._setattr('_parent', parent)
                     parent._setattr(iid, tail)
                 else:
@@ -433,7 +429,7 @@ class tx:
 
             tail._setattr(VERSION, new_version)
             
-        return prev_version, new_version, new_root, tail, redirection
+        return prev_version, new_version, new_root, tail
 
     def commit(self, write_log=True):
         '''
@@ -464,15 +460,10 @@ class tx:
 
         # old roots cache update
         for root_oid in self.candidate:
-            prev_version, new_version, new_root, redirection = self.candidate[root_oid]
+            prev_version, new_version, new_root = self.candidate[root_oid]
 
-            # Attaches the existing children (excluding newborns)
-            if redirection:
-                for r in redirection:
-                    parent = r[0]
-                    children = r[1]
-                    for c in children:
-                        c._setattr('_parent', parent)
+            if new_root:
+               align_vector2(new_root, new_version)
 
             old_root = None
             if root_oid in _idb:
@@ -563,7 +554,7 @@ class tx:
             if isinstance(instance, Cont):
                 instance.freeze_()
             root_oid = qname[0]
-            prev_version, new_version, new_root, above_tail, redirection = self._copy_on_write(qname, above_tail=True)
+            prev_version, new_version, new_root, above_tail = self._copy_on_write(qname, above_tail=True)
             self._instance_version_set(instance, new_version)
 
             if above_tail:
@@ -571,8 +562,7 @@ class tx:
             else:
                 new_root = instance
             if not root_oid in self.candidate:
-                self.candidate[root_oid] = (prev_version, new_version, new_root,
-                        redirection)
+                self.candidate[root_oid] = (prev_version, new_version, new_root)
 
             # Commit queue
             self._enqueue_commit(OPE.PUT, path, tega_id, instance, ephemeral)
@@ -615,7 +605,7 @@ class tx:
             #      delete operation
             #
             root_oid = qname[0]
-            prev_version, new_version, new_root, above_tail, redirection = self._copy_on_write(qname, above_tail=True)
+            prev_version, new_version, new_root, above_tail = self._copy_on_write(qname, above_tail=True)
             if above_tail:
                 oid = qname[-1]
                 instance = above_tail[oid]
@@ -627,8 +617,7 @@ class tx:
                 instance = _idb[path]
 
             if not root_oid in self.candidate:
-                self.candidate[root_oid] = (prev_version, new_version, new_root,
-                        redirection)
+                self.candidate[root_oid] = (prev_version, new_version, new_root)
 
             # Commit queue
             ephemeral = instance.is_ephemeral_()

@@ -43,6 +43,7 @@ sync                    synchronize with global idb
 rollback    M     M     rollback a specific root to a previous version
 ss                      take a snapshot
 plugins                 show plugins attached to the tega db
+reload                  reload plugins
 
 [CRUD operations] (M)andatory, (O)ptional, (X) -s option required
 command    path version -s  explanation
@@ -121,7 +122,7 @@ def process_cmd(tornado_loop=False):
         print(driver.tega_id)
     elif cmd in ('clear', 'roots', 'old',
             'sync', 'channels', 'subscribers', 'ids',
-            'global', 'forwarders', 'plugins'):
+            'global', 'forwarders', 'plugins', 'reload'):
         status, reason, data = getattr(driver, cmd)()
         if data:
             print(yaml.dump(data))

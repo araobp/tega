@@ -285,29 +285,27 @@ class TestSequence(unittest.TestCase):
         TestSequence.driver_g.commit()
 
         data_compared = [['r(1)', 'r.b(1)'], ['r.b(1)', 'r(1)'], ['r.b(1)',
-            'r.b.z(1)'], ['r.b.z(1)', 'r.b(1)'], ['r.b(1)', 'r.b.y(1)'],
-            ['r.b.y(1)', 'r.b(1)'], ['r.b(1)', 'r.b.x(1)'], ['r.b.x(1)',
-                'r.b(1)'], ['r(1)', 'r.a(0)'], ['r.a(0)', 'r(0)'], ['r.a(0)',
-                    'r.a.z(0)'], ['r.a.z(0)', 'r.a(0)'], ['r.a(0)', 'r.a.y(0)'],
-                ['r.a.y(0)', 'r.a(0)'], ['r.a(0)', 'r.a.x(0)'], ['r.a.x(0)',
-                    'r.a(0)'], ['r(0)', 'r.a(0)'], ['r.a(0)', 'r(0)'],
-                ['r.a(0)', 'r.a.z(0)'], ['r.a.z(0)', 'r.a(0)'], ['r.a(0)',
-                    'r.a.y(0)'], ['r.a.y(0)', 'r.a(0)'], ['r.a(0)', 'r.a.x(0)'],
+            'r.b.y(1)'], ['r.b.y(1)', 'r.b(1)'], ['r.b(1)', 'r.b.z(1)'],
+            ['r.b.z(1)', 'r.b(1)'], ['r.b(1)', 'r.b.x(1)'], ['r.b.x(1)',
+                'r.b(1)'], ['r(1)', 'r.a(0)'], ['r.a(0)', 'r(1)'], ['r.a(0)',
+                    'r.a.y(0)'], ['r.a.y(0)', 'r.a(0)'], ['r.a(0)', 'r.a.z(0)'],
+                ['r.a.z(0)', 'r.a(0)'], ['r.a(0)', 'r.a.x(0)'], ['r.a.x(0)',
+                    'r.a(0)'], ['r(0)', 'r.a(0)'], ['r.a(0)', 'r(1)'],
+                ['r.a(0)', 'r.a.y(0)'], ['r.a.y(0)', 'r.a(0)'], ['r.a(0)',
+                    'r.a.z(0)'], ['r.a.z(0)', 'r.a(0)'], ['r.a(0)', 'r.a.x(0)'],
                 ['r.a.x(0)', 'r.a(0)']]
         _, _, data = TestSequence.driver_g.edges(old_roots=True)
         data0 = _edges_set(data)
         data1 = _edges_set(data_compared)
         self.assertEqual(set(data0), set(data1))
 
-        data_compared = [['r(1)', 'r.b(1)'],
-                ['r.b(1)', 'r(1)'], ['r.b(1)', 'r.b.y(1)'],
-                ['r.b.y(1)', 'r.b(1)'], ['r.b(1)', 'r.b.x(1)'],
-                ['r.b.x(1)', 'r.b(1)'], ['r.b(1)', 'r.b.z(1)'],
-                ['r.b.z(1)', 'r.b(1)'], ['r(1)', 'r.a(0)'],
-                ['r.a(0)', 'r(0)'], ['r.a(0)', 'r.a.y(0)'],
-                ['r.a.y(0)', 'r.a(0)'], ['r.a(0)', 'r.a.x(0)'],
-                ['r.a.x(0)', 'r.a(0)'], ['r.a(0)', 'r.a.z(0)'],
-                ['r.a.z(0)', 'r.a(0)']]
+        data_compared = [['r(1)', 'r.b(1)'], ['r.b(1)', 'r(1)'], ['r.b(1)',
+            'r.b.y(1)'], ['r.b.y(1)', 'r.b(1)'], ['r.b(1)', 'r.b.z(1)'],
+            ['r.b.z(1)', 'r.b(1)'], ['r.b(1)', 'r.b.x(1)'], ['r.b.x(1)',
+                'r.b(1)'], ['r(1)', 'r.a(0)'], ['r.a(0)', 'r(1)'], ['r.a(0)',
+                    'r.a.y(0)'], ['r.a.y(0)', 'r.a(0)'], ['r.a(0)', 'r.a.z(0)'],
+                ['r.a.z(0)', 'r.a(0)'], ['r.a(0)', 'r.a.x(0)'], ['r.a.x(0)',
+                    'r.a(0)']]
         _, _, data = TestSequence.driver_g.edges(old_roots=False)
         data0 = _edges_set(data)
         data1 = _edges_set(data_compared)

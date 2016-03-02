@@ -4,6 +4,7 @@ import tega.tree
 from abc import ABCMeta, abstractmethod
 from enum import Enum
 import importlib
+import imp
 import inspect
 import os
 import sys
@@ -148,8 +149,12 @@ def plugins(plugin_path):
     for script in os.listdir(os.path.join(plugin_path, PACKAGE)):
         if script.endswith('.py'):
             mod_name = script.replace('.py', '')
+            mod_str = '{}.{}'.format(PACKAGE, mod_name)
             try:
-                mod = importlib.import_module('{}.{}'.format(PACKAGE, mod_name))
+                if mod_str in sys.modules:
+                    mod = imp.reload(sys.modules[mod_str])
+                else:
+                    mod = importlib.import_module('{}.{}'.format(PACKAGE, mod_name))
                 for name, class_ in inspect.getmembers(mod, inspect.isclass):
                     if issubclass(class_, PlugIn):
                         classes.append(class_)

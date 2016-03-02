@@ -222,6 +222,9 @@ class ManagementRestApiHandler(tornado.web.RequestHandler):
             data = tega.idb.idb_edges(root_oid, old_roots)
             self.write(json.dumps(data))
             self.set_header('Content-Type', 'application/json')
+        elif cmd == 'reload':
+            reload_plugins()
+            self.set_header('Content-Type', 'application/json')
 
 class RestApiHandler(tornado.web.RequestHandler):
     '''
@@ -661,9 +664,31 @@ class _SubscriberClient(object):
                     tega.idb.unsubscribe_all(self.subscriber)
                     break
 
+def reload_plugins():
+    '''
+    Reloads plugins
+    '''
+    global extensions, plugins
+
+    # Removes plugins attached to idb
+    if len(plugins) > 0:
+        for tega_id, subscriber in plugins.items():
+            tega.idb.unsubscribe_all(subscriber)
+            tega.idb.remove_tega_id(tega_id)
+
+    # Attaches plugins to idb
+    _plugins = tega.subscriber.plugins(extensions)
+    for class_ in _plugins:
+        singleton = class_()
+        singleton.initialize()
+        tega_id = singleton.tega_id
+        plugins[tega_id] = singleton
+        tega.idb.add_tega_id(tega_id)
+        logging.info('plugin attached to idb: {}'.format(singleton.__class__.__name__))
+
 def main():
 
-    global ghost, gport, sync_path, server_as_subscriber, server_tega_id, plugins
+    global ghost, gport, sync_path, server_as_subscriber, server_tega_id, plugins, extensions
 
     logging.basicConfig(
             level=logging.DEBUG,
@@ -727,14 +752,8 @@ def main():
 
     # Attaches plugins to idb
     if args.extensions:
-        _plugins = tega.subscriber.plugins(args.extensions)
-        for class_ in _plugins:
-            singleton = class_()
-            singleton.initialize()
-            _tega_id = singleton.tega_id
-            plugins[_tega_id] = singleton
-            tega.idb.add_tega_id(_tega_id)
-            logging.info('plugin attached to idb: {}'.format(singleton.__class__.__name__))
+        extensions = args.extensions
+        reload_plugins()
 
     application = tornado.web.Application([
         (r'/_pubsub', PubSubHandler),

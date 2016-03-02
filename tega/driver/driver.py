@@ -102,7 +102,7 @@ class Driver(object):
             self._tega_id = str(uuid.uuid4())
 
         for cmd in ('roots', 'old', 'channels', 'subscribers',
-                    'ids', 'global', 'forwarders', 'plugins'):
+                    'ids', 'global', 'forwarders', 'plugins', 'reload'):
             setattr(self, cmd, self._build_cmd(cmd))
 
     @property
