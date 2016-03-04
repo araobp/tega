@@ -19,8 +19,6 @@ class WGU624(tega.subscriber.PlugIn):
 
     def __init__(self):
         super().__init__()
-
-    def initialize(self):
         tornado.httpclient.AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
         #self.conn = tornado.httpclient.AsyncHTTPClient()
         self.conn = tornado.httpclient.HTTPClient()

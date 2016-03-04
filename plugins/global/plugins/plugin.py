@@ -7,8 +7,6 @@ class GlobalPlugin1(tega.subscriber.PlugIn):
 
     def __init__(self):
         super().__init__()
-
-    def initialize(self):
         inv = tega.tree.Cont('inventory')
         with self.tx() as t:
             inv.ne1.f5 = self.func(max)

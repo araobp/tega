@@ -325,7 +325,9 @@ class PubSubHandler(tornado.websocket.WebSocketHandler):
     Data Change Notification subscription
     '''
 
-    def initialize(self):
+    def __init__(self, application, request, **kwargs):
+    #def initialize(self):
+        super().__init__(application, request, **kwargs)
         self.parser = build_parser('server')
         self.tega_id = None  # remote tega_id set by SESSION
         self.subscriber = None
@@ -680,7 +682,7 @@ def reload_plugins():
     _plugins = tega.subscriber.plugins(extensions)
     for class_ in _plugins:
         singleton = class_()
-        singleton.initialize()
+        #singleton.initialize()
         tega_id = singleton.tega_id
         plugins[tega_id] = singleton
         tega.idb.add_tega_id(tega_id)

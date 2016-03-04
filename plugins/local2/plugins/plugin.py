@@ -10,8 +10,6 @@ class Subscriber3(tega.subscriber.PlugIn):
 
     def __init__(self):
         super().__init__()
-
-    def initialize(self):
         self.subscribe('call', SCOPE.GLOBAL)
 
     @gen.coroutine

@@ -10,8 +10,6 @@ class Subscriber1(tega.subscriber.PlugIn):
 
     def __init__(self):
         super().__init__()
-
-    def initialize(self):
         self.subscribe('call', SCOPE.GLOBAL)
         with self.tx() as t:
             a = tega.tree.Cont('a')
