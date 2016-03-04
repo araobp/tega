@@ -19,7 +19,7 @@ import (
 const (
 	TEGA_ID = "anonymous"
 	HOST    = "localhost"
-	PORT    = 8888
+	PORT    = 8739
 )
 
 // CRUD-related constants
@@ -43,7 +43,7 @@ const (
 
 // Tega protocol over WebSocket
 const (
-	SESSION = "SESSION"
+	SESSION    = "SESSION"
 	SESSIONACK = "SESSIONACK"
 )
 
