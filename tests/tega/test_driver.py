@@ -30,8 +30,8 @@ class TestSequence(unittest.TestCase):
 
         time.sleep(3)
 
-        TestSequence.driver_g = tega.driver.Driver('localhost', 8888, 'driver_g')
-        TestSequence.driver_l1 = tega.driver.Driver('localhost', 8889, 'driver_l1')
+        TestSequence.driver_g = tega.driver.Driver('localhost', 8739, 'driver_g')
+        TestSequence.driver_l1 = tega.driver.Driver('localhost', 8740, 'driver_l1')
 
     def setUp(self):
 

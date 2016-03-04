@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-tega-server -p 8890 -d $1 -H localhost -P 8888 -S inventory.ne2 -t local2
+tega-server -p 8741 -d $1 -H localhost -P 8739 -C inventory.ne2 -t local2

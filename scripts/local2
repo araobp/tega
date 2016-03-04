@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-tega-server -p 8890 -d ./var -H localhost -P 8888 -C config-local2 ip-local2 -O operational-local2 -t local2 -e ../plugins/local2
+tega-server -p 8741 -d ./var -H localhost -P 8739 -C config-local2 ip-local2 -O operational-local2 -t local2 -e ../plugins/local2

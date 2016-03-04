@@ -4,7 +4,7 @@ import os
 HOST = 'localhost'
 
 # REST API server port number
-PORT = 8888
+PORT = 8739
 
 # REST API HTTP request headers
 HEADERS = {'Content-type': 'application/json',
