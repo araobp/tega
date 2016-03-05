@@ -611,7 +611,7 @@ class tx:
                 instance = above_tail[oid]
                 #del above_tail[oid]
                 above_tail._delattr(oid)
-                if above_tail.is_empty():
+                if above_tail.is_empty_():
                     above_tail.delete_()
             else:
                 instance = _idb[path]

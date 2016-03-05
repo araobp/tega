@@ -398,7 +398,7 @@ class Cont(MutableMapping):
     def __repr__(self):
         return "'<{} _oid={}>'".format(self.__class__, self._getattr('_oid'))
 
-    def is_empty(self):
+    def is_empty_(self):
         _is_empty = True 
         for k in self.__dict__.keys():
             if type(k) != str or not k.startswith('_'):
@@ -417,7 +417,7 @@ class Cont(MutableMapping):
         parent = self._getattr('_parent')
         if parent:
             parent._delattr(self._getattr('_oid'))
-        if parent and parent.is_empty():
+        if parent and parent.is_empty_():
             parent.delete_()
 
     def _validation(self, key, value):
