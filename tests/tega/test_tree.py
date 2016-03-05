@@ -65,17 +65,29 @@ class TestSequence(unittest.TestCase):
     def test_set_builtin_attr(self):
         r = tega.tree.Cont('r')
 
+        # int
         r._set_builtin_attr('a', 1)
         self.assertEqual(0, r.a._getattr('_version'))
         self.assertEqual(r, r.a._getattr('_parent'))
         self.assertEqual('a', r.a._getattr('_oid'))
+        self.assertFalse(r.a._getattr('_ephemeral'))
         self.assertEqual(1, r.a)
 
+        # str
         r._set_builtin_attr('a', '1')
         self.assertEqual(0, r.a._getattr('_version'))
         self.assertEqual(r, r.a._getattr('_parent'))
         self.assertEqual('a', r.a._getattr('_oid'))
+        self.assertFalse(r.a._getattr('_ephemeral'))
         self.assertEqual('1', r.a)
+
+        # tuple
+        r._set_builtin_attr('a', (1, 2))
+        self.assertEqual((1, 2), r.a)
+
+        # float
+        r._set_builtin_attr('a', 0.1)
+        self.assertEqual(0.1, r.a)
 
     def test_set_wrapped_attr(self):
         r = tega.tree.Cont('r')
@@ -85,6 +97,7 @@ class TestSequence(unittest.TestCase):
         self.assertEqual(0, r.a._getattr('_version'))
         self.assertEqual(r, r.a._getattr('_parent'))
         self.assertEqual('a', r.a._getattr('_oid'))
+        self.assertFalse(r.a._getattr('_ephemeral'))
         self.assertEqual(1, r.a)
 
         str_1 = r._wrapped_value('1')
@@ -92,6 +105,7 @@ class TestSequence(unittest.TestCase):
         self.assertEqual(0, r.a._getattr('_version'))
         self.assertEqual(r, r.a._getattr('_parent'))
         self.assertEqual('a', r.a._getattr('_oid'))
+        self.assertFalse(r.a._getattr('_ephemeral'))
         self.assertEqual('1', r.a)
 
     def test_is_empty(self):
@@ -294,9 +308,17 @@ class TestSequence(unittest.TestCase):
         self.assertEqual(max(7,8), func())
         self.assertEqual(max, func)
 
+    def test_Bool(self):
+        r = tega.tree.Cont('r')
+        r.a = True
+        r.b = False
+        self.assertTrue(isinstance(r.a, tega.tree.Bool))
+        self.assertTrue(isinstance(r.b, tega.tree.Bool))
+        self.assertTrue(r.a)
+        self.assertFalse(r.b)
+
     def test_serialize_(self):
         r = tega.tree.Cont('r')
-
         r.a.b = 1
         d = {'_version': 0, '_value': 1, '_parent': 'a', '_oid': 'b',
                 '_ephemeral': False}
@@ -371,6 +393,22 @@ class TestSequence(unittest.TestCase):
         r2 = r1.copy_(freeze=True)
         with self.assertRaises(AttributeError):
             r2.a = 3
+
+    def test_merge(self):
+        r1 = tega.tree.Cont('r1')
+        r2 = tega.tree.Cont('r2')
+        r1.a.x = 1
+        r1.a.y = 2
+        r1.a.z = 3
+        r1.b.x = 4
+        r1.b.y = 5
+        r1.b.z = 6
+        r2.b.x = 7
+        r2.b.y = 8
+        r2.b.z = 9
+        r1.merge_(r2)
+        data = {'b': {'z': 9, 'y': 8, 'x': 7}, 'a': {'z': 3, 'y': 2, 'x': 1}}
+        self.assertEqual(data, r1.serialize_())
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

@@ -17,6 +17,7 @@ class Cont(MutableMapping):
     --------------
     Cont --+-- Cont --+-- wrapped_str
            |          +-- wrapped_int
+           |          +-- wrapped_float
            |          +-- wrapped_tuple
            |          +-- Bool
            |
@@ -449,7 +450,7 @@ class Cont(MutableMapping):
                         raise Exception("schema violation, {}:{}".format(key, value))
 
     # Python built-in types
-    _builtin_types = [int, str, tuple]
+    _builtin_types = [int, float, complex, str, tuple]
 
     def _deepcopy_(self, new_parent=None):
         '''
