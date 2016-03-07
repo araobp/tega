@@ -6,19 +6,20 @@ import uuid
 
 class Cont(MutableMapping):
     '''
-    2014/8/14 - 
+    2014/8/14 -- initial version
+    2016/3/7  -- wrapped_* classes replaced with Cont sub-classes 
 
     Classes
     -------
     - Cont and RPC classes 
-    - Wrapper classes and Bool for Python built-in types
+    - Wrapper classes for Python built-in types
 
     Tree structure
     --------------
-    Cont --+-- Cont --+-- wrapped_str
-           |          +-- wrapped_int
-           |          +-- wrapped_float
-           |          +-- wrapped_tuple
+    Cont --+-- Cont --+-- Str
+           |          +-- Int 
+           |          +-- Float
+           |          +-- Tuple
            |          +-- Bool
            |
            +-- Cont --+-- Cont -- ...
@@ -40,7 +41,7 @@ class Cont(MutableMapping):
     #    __schema = __schema['schema']
     #except:
     #    pass
-    
+
     def __init__(self, _oid=None, _parent=None, _version=0):
         '''
         _oid is a hashable object such as str, int or frozendict.
@@ -67,63 +68,21 @@ class Cont(MutableMapping):
     _getitem = _getattr
     _delitem = _delattr
 
-    def _get_wrapped_type(self, type_):
-        '''
-        Returns a wrapped type corresponding to the original type.
-        '''
-        return self.__class__._types[type_]
-
-    def _wrapped_value(self, value):
-        '''
-        Converts a value of built-in type into a value of wrapped-type.
-
-        _types contains the following types:
-        wrapped_int, wrapped_str, wrapped_list, and wrapped_tuple.
-        '''
-        v = self._get_wrapped_type(type(value))(value)
-        return v
-
-    def _set_builtin_attr(self, key, value):
-        '''
-        Converts a value into a wrapped one, and then sets attributes to it.
-        '''
-        _value = self._wrapped_value(value)
-        self._set_wrapped_attr(key, _value)
-
-    def _set_wrapped_attr(self, key, value):
-        '''
-        Sets attributes to a wrapped one.
-        '''
-        value._setattr('_version', 0)
-        value._setattr('_parent', self)
-        value._setattr('_oid', key)
-        value._setattr('_ephemeral', False)
-        self._setattr(key, value)
-
     def __setattr__(self, key, value):
 
         self._immutability_check()
         self._validation(key, value) 
-        types = self.__class__._types
-        wrapped_types = self.__class__._wrapped_types
         type_ = type(value)
         if type_ == dict: # dict => Cont conversion
             c = Cont(_oid=key, _parent=self)
             for k,v in value.items():
                 c[k] = v
             self._setattr(key, c)
-        elif type_ == list: # list => tuple (immutable list)
-            value = tuple(value)
-            self._set_builtin_attr(key, value)
-        elif type_ in types: # Built-in types => Wrapped types
-            self._set_builtin_attr(key, value)
-        elif type_ in wrapped_types: # Wrapped built-in types
-            self._set_wrapped_attr(key, value)
-        elif type_ == Cont: # Cont
+        elif isinstance(value, Cont):
             self._setattr(key, value)
             value._setattr('_parent', self)
-        elif type_ == bool:
-            self._setattr(key, Bool(key, self, value))
+        elif type_ in _builtin_types:
+            self._setattr(key, _builtin_types[type_](key, self, value))
         elif type_ == Func: # RPC function
             self._setattr(key, RPC(key, self, value))
         else:
@@ -246,7 +205,7 @@ class Cont(MutableMapping):
         for k,v in self.__dict__.items():
             if k == '_parent' or k == '_frozen':
                 pass  # These attributes are set in __init__().
-            elif isinstance(v, Cont) or self.is_wrapped(v):
+            elif isinstance(v, Cont):
                 obj_setattr(k, v.deepcopy_(new_parent=obj))
             else:
                 obj_setattr(k, deepcopy(v))
@@ -318,9 +277,14 @@ class Cont(MutableMapping):
         Caveat: The keyword 'iteritems' cannot be used as an attribute
         for Cont
         '''
+        wrapped_types = _wrapped_types
         for k in self:
             if not k.startswith('_'):
-                yield k, self.__dict__[k]
+                v = self.__dict__[k]
+                if type(v) in wrapped_types:
+                    yield k, v._value
+                else:
+                    yield k, v 
 
     def change_(self, to):
         '''
@@ -362,7 +326,7 @@ class Cont(MutableMapping):
             if is_child_or_value:
                 if type_v == Cont:
                     out[k] = {}
-                elif type_v == Bool or type_v == RPC or self.is_wrapped(v):
+                elif type_v in _wrapped_types or type_v == RPC:
                     out[k] = v.serialize_(internal=internal)
             elif internal and not is_child_or_value:
                 if type_v == Cont or internal and type_v == RPC:
@@ -373,7 +337,7 @@ class Cont(MutableMapping):
                 elif self._is_serializable(k):
                     out[k] = v
 
-            if k != '_parent' and isinstance(v, Cont):
+            if is_child_or_value and isinstance(v, Cont):
                 v.serialize_(internal=internal, out=out[k],
                         serialize_ephemeral=serialize_ephemeral)
 
@@ -401,17 +365,9 @@ class Cont(MutableMapping):
     def is_empty_(self):
         _is_empty = True 
         for k in self.__dict__.keys():
-            if type(k) != str or not k.startswith('_'):
+            if not k.startswith('_'):
                 _is_empty = False
         return _is_empty
-
-    def set_(self, value):
-        '''
-        "r.a.b(x=1).set_(1)" instead of "r.a.b(x=1) = 1".
-        '''
-        _parent = self._getattr('_parent')
-        _oid = self._getattr('_oid')
-        _parent.__setattr__(_oid, value)
 
     def delete_(self):
         parent = self._getattr('_parent')
@@ -449,128 +405,7 @@ class Cont(MutableMapping):
                     else:
                         raise Exception("schema violation, {}:{}".format(key, value))
 
-    # Python built-in types
-    _builtin_types = [int, float, complex, str, tuple]
-
-    def _deepcopy_(self, new_parent=None):
-        '''
-        It needs to remove all the attributes before copy operation,
-        otherwise the built-in type raises error.
-        '''
-        version = self._version
-        parent = self._parent
-        oid = self._oid
-        ephemeral = self._ephemeral
-        del self._version
-        del self._parent
-        del self._oid
-        del self._ephemeral
-        c = copy.deepcopy(self)
-        self._version = version
-        self._parent = parent
-        self._oid = oid
-        self._ephemeral = ephemeral
-        c._parent = new_parent
-        c._version = version
-        c._oid = oid
-        c._ephemeral = ephemeral 
-        self._deepcopy_parents(c)
-        return c
-    
-    def _copy_(self, freeze=True):
-        '''
-        Note: no operation for "freeze", since wrapped types are
-        always immutable.
-        '''
-        version = self._version
-        parent = self._parent
-        oid = self._oid
-        ephemeral = self._ephemeral
-        del self._version
-        del self._parent
-        del self._oid
-        del self._ephemeral
-        self._version = version
-        self._parent = parent
-        self._oid = oid
-        self._ephemeral = ephemeral
-        c = copy.copy(self)
-        c._parent = parent
-        c._version = version
-        c._oid = oid
-        c._ephemeral = ephemeral
-        return c
-
-    def _serialize_(self, internal=False, serialize_ephemeral=True):
-        
-        if not serialize_ephemeral and self.is_ephemeral_():
-            return None
-        
-        if internal:
-            wrapped = {}
-            wrapped['_value'] = self
-            wrapped['_version'] = self._getattr('_version')
-            wrapped['_oid'] = self._getattr('_oid')
-            wrapped['_parent'] = self._getattr('_parent')._getattr('_oid')
-            wrapped['_ephemeral'] = self._getattr('_ephemeral')
-            return wrapped
-        else:
-            return self
-
-    _attrs = {
-            '_getattr': _getattr,
-            '_setattr': _setattr,
-            '_delattr': _delattr,
-            '_qname': _qname,
-            'qname_': qname_,
-            '_deepcopy_parents': _deepcopy_parents,
-            'deepcopy_': _deepcopy_,
-            'copy_': _copy_,
-            'change_': change_,
-            'serialize_': _serialize_,
-            'dumps_': dumps_,
-            'delete_': delete_,
-            'ephemeral_': ephemeral_,
-            'is_ephemeral_': is_ephemeral_,
-            'root_': root_
-            }
-
-    _types = {}
-    _wrapped_types = {}
-
-    for type_ in _builtin_types:
-        wrapped_type = type('wrapped_'+type_.__name__, (type_,), _attrs)
-        _types[type_] = wrapped_type 
-        _wrapped_types[wrapped_type] = type_
-
-    def is_wrapped(self, instance):
-        if type(instance) in self.__class__._wrapped_types:
-            return True
-        else:
-            False
-
-def is_builtin_type(instance):
-        if type(instance) in Cont._wrapped_types:
-            return True
-        else:
-            False
-
-class Bool(Cont):
-    '''
-    Bool class.
-
-    Note: bool type cannot be extended.
-    '''
-    
-    def __init__(self, _oid, _parent, v):
-        super().__init__(_oid, _parent)
-        if v == True or v == False:
-            self._setattr('_value', v)
-        else:
-            raise ValueError('Not boolean type')
-
-    def __bool__(self):
-        return self._getattr('_value')
+class BuiltinTypeMixin(object):
 
     def __str__(self):
         return str(self._getattr('_value'))
@@ -602,7 +437,24 @@ class Bool(Cont):
                     out[k] = v
             return out
         else:
-            return self.__bool__()
+            return self._getattr('_value')
+
+class Bool(BuiltinTypeMixin, Cont):
+    '''
+    Bool class.
+
+    Note: bool type cannot be extended.
+    '''
+    
+    def __init__(self, _oid=None, _parent=None, v=False):
+        super().__init__(_oid, _parent)
+        if v == True or v == False:
+            self._setattr('_value', v)
+        else:
+            raise ValueError('Not boolean type')
+
+    def __bool__(self):
+        return self._getattr('_value')
 
     def deepcopy_(self, new_parent=None):
         _oid = self._getattr('_oid')
@@ -610,14 +462,86 @@ class Bool(Cont):
         self._deepcopy_parents(bool_)
         return bool_ 
 
+class Int(BuiltinTypeMixin, Cont):
+    '''
+    Int class.
+    '''
+    def __init__(self, _oid=None, _parent=None, v=0):
+        super().__init__(_oid, _parent)
+        if type(v) == int:
+            self._setattr('_value', v)
+        else:
+            raise ValueError('Not int type')
+
+    def deepcopy_(self, new_parent=None):
+        _oid = self._getattr('_oid')
+        int_ = Int(_oid, _parent=new_parent, v=self._getattr('_value'))
+        self._deepcopy_parents(int_)
+        return int_ 
+
+class Str(BuiltinTypeMixin, Cont):
+    '''
+    Int class.
+    '''
+    def __init__(self, _oid=None, _parent=None, v=''):
+        super().__init__(_oid, _parent)
+        if type(v) == str:
+            self._setattr('_value', v)
+        else:
+            raise ValueError('Not int type')
+
+    def deepcopy_(self, new_parent=None):
+        _oid = self._getattr('_oid')
+        str_ = Str(_oid, _parent=new_parent, v=self._getattr('_value'))
+        self._deepcopy_parents(str_)
+        return str_ 
+
+class Tuple(BuiltinTypeMixin, Cont):
+    '''
+    Tuple class.
+    '''
+    def __init__(self, _oid=None, _parent=None, v=[]):
+        super().__init__(_oid, _parent)
+        type_ = type(v)
+        if type_ == tuple:
+            self._setattr('_value', v)
+        elif type_ == list:
+            self._setattr('_value', tuple(v))
+        else:
+            raise ValueError('Neither list or tuple type')
+
+    def deepcopy_(self, new_parent=None):
+        _oid = self._getattr('_oid')
+        tuple_ = Tuple(_oid, _parent=new_parent, v=self._getattr('_value'))
+        self._deepcopy_parents(tuple_)
+        return tuple_ 
+
+class Float(BuiltinTypeMixin, Cont):
+    '''
+    Float class.
+    '''
+    def __init__(self, _oid=None, _parent=None, v=0.0):
+        super().__init__(_oid, _parent)
+        type_ = type(v)
+        if type_ == float:
+            self._setattr('_value', v)
+        else:
+            raise ValueError('not float type')
+
+    def deepcopy_(self, new_parent=None):
+        _oid = self._getattr('_oid')
+        float_ = Float(_oid, _parent=new_parent, v=self._getattr('_value'))
+        self._deepcopy_parents(float_)
+        return float_ 
+
 class RPC(Cont):
     '''
     This class is a wrapper for Func class.
     '''
     
-    def __init__(self, _oid, _parent, func):
+    def __init__(self, _oid=None, _parent=None, v=None):
         super().__init__(_oid, _parent)
-        self._setattr('_value', func)
+        self._setattr('_value', v)
 
     @property
     def owner_id(self):
@@ -632,8 +556,8 @@ class RPC(Cont):
     def __repr__(self):
         return repr(self._getattr('_value'))
 
-    def __eq__(self, func):
-        if self._getattr('_value') == func:
+    def __eq__(self, v):
+        if self._getattr('_value') == v:
             return True
         else:
             return False
@@ -660,7 +584,7 @@ class RPC(Cont):
 
     def deepcopy_(self, new_parent=None):
         _oid = self._getattr('_oid')
-        rpc = RPC(_oid, _parent=new_parent, func=self._get_func())
+        rpc = RPC(_oid, _parent=new_parent, v=self._get_func())
         self._deepcopy_parents(rpc)
         return rpc 
 
@@ -723,3 +647,9 @@ class Func(object):
         else:
             return False
 
+# Python built-in types
+_builtin_types = {list: Tuple, tuple: Tuple, str: Str, int: Int, float: Float,
+        bool: Bool}
+# Wrapper classes for Python built-in types
+_wrapped_types = (Tuple, Str, Int, Float, Bool)
+    

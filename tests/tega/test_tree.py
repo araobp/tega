@@ -53,101 +53,36 @@ class TestSequence(unittest.TestCase):
         self.assertEqual(['r2', 'a'], r1.a.qname_())
         self.assertEqual(['r2', 'a'], r2.a.qname_())
 
-    def test_wrapped_value(self):
-        r = tega.tree.Cont('r')
-        self.assertEqual(r._get_wrapped_type(int),
-                type(r._wrapped_value(1)))
-        self.assertEqual(r._get_wrapped_type(str),
-                type(r._wrapped_value('1')))
-        self.assertEqual(r._get_wrapped_type(tuple),
-                type(r._wrapped_value((1,))))
-
-    def test_set_builtin_attr(self):
-        r = tega.tree.Cont('r')
-
-        # int
-        r._set_builtin_attr('a', 1)
-        self.assertEqual(0, r.a._getattr('_version'))
-        self.assertEqual(r, r.a._getattr('_parent'))
-        self.assertEqual('a', r.a._getattr('_oid'))
-        self.assertFalse(r.a._getattr('_ephemeral'))
-        self.assertEqual(1, r.a)
-
-        # str
-        r._set_builtin_attr('a', '1')
-        self.assertEqual(0, r.a._getattr('_version'))
-        self.assertEqual(r, r.a._getattr('_parent'))
-        self.assertEqual('a', r.a._getattr('_oid'))
-        self.assertFalse(r.a._getattr('_ephemeral'))
-        self.assertEqual('1', r.a)
-
-        # tuple
-        r._set_builtin_attr('a', (1, 2))
-        self.assertEqual((1, 2), r.a)
-
-        # float
-        r._set_builtin_attr('a', 0.1)
-        self.assertEqual(0.1, r.a)
-
-    def test_set_wrapped_attr(self):
-        r = tega.tree.Cont('r')
-
-        int_1 = r._wrapped_value(1)
-        r._set_wrapped_attr('a', int_1)
-        self.assertEqual(0, r.a._getattr('_version'))
-        self.assertEqual(r, r.a._getattr('_parent'))
-        self.assertEqual('a', r.a._getattr('_oid'))
-        self.assertFalse(r.a._getattr('_ephemeral'))
-        self.assertEqual(1, r.a)
-
-        str_1 = r._wrapped_value('1')
-        r._set_wrapped_attr('a', str_1)
-        self.assertEqual(0, r.a._getattr('_version'))
-        self.assertEqual(r, r.a._getattr('_parent'))
-        self.assertEqual('a', r.a._getattr('_oid'))
-        self.assertFalse(r.a._getattr('_ephemeral'))
-        self.assertEqual('1', r.a)
-
-    def test_is_empty(self):
+    def test_is_empty_(self):
         r = tega.tree.Cont('r')
 
         r.a.b
-        self.assertTrue(r.a.b.is_empty())
-
-    def test_set_(self):
-        r = tega.tree.Cont('r')
-        r.b.set_('Bob')
-        self.assertEqual('Bob', r.b)
+        self.assertTrue(r.a.b.is_empty_())
 
     def test_delete_(self):
         r = tega.tree.Cont('r')
         r.a.b = 1
         r.a.b.delete_()  # r has no subtrees. 
-        self.assertTrue(r.is_empty())
+        self.assertTrue(r.is_empty_())
 
     def test__setattr__(self):
         r = tega.tree.Cont('r')
 
         r.a = 1
-        self.assertEqual(r._get_wrapped_type(int), type(r.a))
         self.assertEqual(1, r.a)
 
         r.a = '1'
-        self.assertEqual(r._get_wrapped_type(str), type(r.a))
         self.assertEqual('1', r.a)
 
         r.a = [1, 2]
-        self.assertEqual(r._get_wrapped_type(tuple), type(r.a))
         self.assertEqual((1, 2), r.a)
 
         r.a = (1, 2)
-        self.assertEqual(r._get_wrapped_type(tuple), type(r.a))
         self.assertEqual((1, 2), r.a)
 
         r.a = {'x': 3}
         self.assertEqual(tega.tree.Cont, type(r.a))
         self.assertEqual({'x':3}, r.a)
-        self.assertEqual(r._get_wrapped_type(int), type(r.a.x))
         self.assertEqual(3, r.a.x)
 
         r.a = True
@@ -169,11 +104,9 @@ class TestSequence(unittest.TestCase):
         del r.a
         r.a[0] = 0
         r.a[1] = 1
-        self.assertEqual(r._get_wrapped_type(int), type(r.a[0]))
         self.assertEqual(0, r.a[0])
         self.assertEqual(1, r.a[1])
         r.a[2].b = 'Alice'
-        self.assertEqual(r._get_wrapped_type(str), type(r.a[2].b))
         self.assertEqual('Alice', r.a[2].b)
 
     def test__getattr__(self):

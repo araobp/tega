@@ -6,7 +6,7 @@ from tega.idb import tx, clear, roots, old, NonLocalRPC
 from tega.messaging import build_parser, parse_rpc_body, request, on_response, REQUEST_TYPE
 import tega.subscriber
 from tega.subscriber import Subscriber, SCOPE
-from tega.tree import Cont, is_builtin_type
+from tega.tree import Cont
 from tega.util import url2path, qname2path, subtree, str2bool
 
 from tornado import gen
@@ -248,7 +248,7 @@ class RestApiHandler(tornado.web.RequestHandler):
         try:
             value = tega.idb.get(url2path(id), version=version,
                     regex_flag=regex_flag)
-            if isinstance(value, Cont) or is_builtin_type(value):
+            if isinstance(value, Cont):
                 self.write(value.dumps_(internal=internal))
             elif isinstance(value, list):
                 dict_ = {v[0]: {'groups':v[2],
