@@ -327,21 +327,5 @@ class TestSequence(unittest.TestCase):
         with self.assertRaises(AttributeError):
             r2.a = 3
 
-    def test_merge(self):
-        r1 = tega.tree.Cont('r1')
-        r2 = tega.tree.Cont('r2')
-        r1.a.x = 1
-        r1.a.y = 2
-        r1.a.z = 3
-        r1.b.x = 4
-        r1.b.y = 5
-        r1.b.z = 6
-        r2.b.x = 7
-        r2.b.y = 8
-        r2.b.z = 9
-        r1.merge_(r2)
-        data = {'b': {'z': 9, 'y': 8, 'x': 7}, 'a': {'z': 3, 'y': 2, 'x': 1}}
-        self.assertEqual(data, r1.serialize_())
-
 if __name__ == '__main__':
     unittest.main(verbosity=2)

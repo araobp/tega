@@ -125,5 +125,20 @@ class TestSequence(unittest.TestCase):
         self.assertEqual('aaa[a-z]*(\.bbb(\.c)?)?',
                 tega.util.nested_regex_path('aaa[a-z]*\.bbb\.c'))
 
+    def test_str2bool(self):
+        self.assertTrue(tega.util.str2bool('True'))
+        self.assertFalse(tega.util.str2bool('False'))
+        self.assertFalse(tega.util.str2bool('false'))
+
+    def test_raw_items(self):
+        r = tega.tree.Cont('r')
+        r.a = 1
+        r.b = True
+        r.c = 'hello'
+        r.d = 0.1
+        data0 = set([('a', 1), ('b', True), ('c', 'hello'), ('d', 0.1)])
+        data1 = set([(k,v.__dict__['_value']) for k,v in tega.util.raw_items(r)])
+        self.assertEqual(data0, data1)
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
