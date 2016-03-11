@@ -67,18 +67,18 @@ class TestSequence(unittest.TestCase):
 
         # int
         r._set_builtin_attr('a', 1)
-        self.assertEqual(0, r.a._getattr('_version'))
-        self.assertEqual(r, r.a._getattr('_parent'))
-        self.assertEqual('a', r.a._getattr('_oid'))
-        self.assertFalse(r.a._getattr('_ephemeral'))
+        self.assertEqual(0, r.a.__dict__['_version'])
+        self.assertEqual(r, r.a.__dict__['_parent'])
+        self.assertEqual('a', r.a.__dict__['_oid'])
+        self.assertFalse(r.a.__dict__['_ephemeral'])
         self.assertEqual(1, r.a)
 
         # str
         r._set_builtin_attr('a', '1')
-        self.assertEqual(0, r.a._getattr('_version'))
-        self.assertEqual(r, r.a._getattr('_parent'))
-        self.assertEqual('a', r.a._getattr('_oid'))
-        self.assertFalse(r.a._getattr('_ephemeral'))
+        self.assertEqual(0, r.a.__dict__['_version'])
+        self.assertEqual(r, r.a.__dict__['_parent'])
+        self.assertEqual('a', r.a.__dict__['_oid'])
+        self.assertFalse(r.a.__dict__['_ephemeral'])
         self.assertEqual('1', r.a)
 
         # tuple
@@ -94,36 +94,31 @@ class TestSequence(unittest.TestCase):
 
         int_1 = r._wrapped_value(1)
         r._set_wrapped_attr('a', int_1)
-        self.assertEqual(0, r.a._getattr('_version'))
-        self.assertEqual(r, r.a._getattr('_parent'))
-        self.assertEqual('a', r.a._getattr('_oid'))
-        self.assertFalse(r.a._getattr('_ephemeral'))
+        self.assertEqual(0, r.a.__dict__['_version'])
+        self.assertEqual(r, r.a.__dict__['_parent'])
+        self.assertEqual('a', r.a.__dict__['_oid'])
+        self.assertFalse(r.a.__dict__['_ephemeral'])
         self.assertEqual(1, r.a)
 
         str_1 = r._wrapped_value('1')
         r._set_wrapped_attr('a', str_1)
-        self.assertEqual(0, r.a._getattr('_version'))
-        self.assertEqual(r, r.a._getattr('_parent'))
-        self.assertEqual('a', r.a._getattr('_oid'))
-        self.assertFalse(r.a._getattr('_ephemeral'))
+        self.assertEqual(0, r.a.__dict__['_version'])
+        self.assertEqual(r, r.a.__dict__['_parent'])
+        self.assertEqual('a', r.a.__dict__['_oid'])
+        self.assertFalse(r.a.__dict__['_ephemeral'])
         self.assertEqual('1', r.a)
 
-    def test_is_empty(self):
+    def test_is_empty_(self):
         r = tega.tree.Cont('r')
 
         r.a.b
-        self.assertTrue(r.a.b.is_empty())
-
-    def test_set_(self):
-        r = tega.tree.Cont('r')
-        r.b.set_('Bob')
-        self.assertEqual('Bob', r.b)
+        self.assertTrue(r.a.b.is_empty_())
 
     def test_delete_(self):
         r = tega.tree.Cont('r')
         r.a.b = 1
         r.a.b.delete_()  # r has no subtrees. 
-        self.assertTrue(r.is_empty())
+        self.assertTrue(r.is_empty_())
 
     def test__setattr__(self):
         r = tega.tree.Cont('r')

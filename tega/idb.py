@@ -18,7 +18,6 @@ import json
 
 now = datetime.datetime.now
 
-VERSION = '_version'
 COMMIT_START_MARKER = '?'
 COMMIT_FINISH_MARKER = '@'
 ROLLBACK_MARKER = '-'
@@ -349,14 +348,14 @@ class tx:
         '''
         Sets "version" to the instance recursively.
         '''
-        instance._setattr(VERSION, version)
+        instance.__dict__['_version'] = version
         instance_version_set = self._instance_version_set
         if isinstance(instance, Cont):
             for k,v in instance.items():
                 if isinstance(v, Cont):
                     instance_version_set(v, version)
                 else:
-                    v._setattr(VERSION, version)
+                    v.__dict__['_version'] = version
 
     def _copy_on_write(self, qname, above_tail=False):
         '''
@@ -398,7 +397,7 @@ class tx:
             new_root = Cont(root_oid)
         else:  # the root exists in _idb but its copy is not in self.candidate
             root = _idb[root_oid]
-            prev_version = root._getattr(VERSION)
+            prev_version = root.__dict__['_version']
             new_version = prev_version + 1
             new_root = root.copy_(freeze=True)
             go = True
@@ -420,14 +419,14 @@ class tx:
                         tail = original
                     else:
                         tail = original.copy_(freeze=True)
-                    tail._setattr('_parent', parent)
-                    parent._setattr(iid, tail)
+                    tail.__dict__['_parent'] = parent
+                    parent.__dict__[iid] = tail
                 else:
                     go = False
                     tail = parent._extend(iid)
-                parent._setattr(VERSION, new_version)
+                parent.__dict__['_version'] = new_version
 
-            tail._setattr(VERSION, new_version)
+            tail.__dict__['_version'] = new_version
             
         return prev_version, new_version, new_root, tail
 
@@ -610,7 +609,7 @@ class tx:
                 oid = qname[-1]
                 instance = above_tail[oid]
                 #del above_tail[oid]
-                above_tail._delattr(oid)
+                del above_tail.__dict__[oid]
                 if above_tail.is_empty_():
                     above_tail.delete_()
             else:
@@ -751,7 +750,7 @@ def get(path, version=None, regex_flag=False):
             instance = _fetch_root_with_version(root_oid, version)
             if len(qname) > 1:
                 for oid in qname[1:]:
-                    instance = instance._getattr(oid) # _getattr is used to avoid creating unnecessay nodes.
+                    instance = instance.__dict__[oid]
             return instance 
     except KeyError:
         raise
@@ -762,7 +761,7 @@ def get_version(path):
     '''
     try:
         tail = get(path)
-        version = tail._getattr('_version')
+        version = tail.__dict__['_version']
         return version
     except KeyError:
         raise
@@ -786,7 +785,7 @@ def _collision_check(qname, version):
         cont = _idb[root_oid]
     if cont and len(qname) > 1:
         for oid in qname[1:]:
-            cont = cont._getattr(oid)
+            cont = cont.__dict__[oid]
     if cont and cont._version == version:
         collision = False
     return collision
@@ -830,7 +829,7 @@ def rollback(tega_id, root_oid, backto, subscriber=None, write_log=True):
     version = pair[0]
     root = pair[1]
     align_vector(root)
-    root._setattr('_version', next_version)
+    root.__dict__['_version'] = next_version
     _idb[root_oid] = root
     marker_rollback = '{} {} {}'.format(str(backto), tega_id, root_oid)
     if _log_fd and write_log:

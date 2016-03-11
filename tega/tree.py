@@ -1,8 +1,6 @@
 from collections import MutableMapping
 import copy
-import io
 import json
-import uuid
 
 class Cont(MutableMapping):
     '''
@@ -45,28 +43,15 @@ class Cont(MutableMapping):
         '''
         _oid is a hashable object such as str, int or frozendict.
         '''
-        self._setattr('_oid', _oid)
-        self._setattr('_parent', _parent)
-        self._setattr('_version', _version)
-        self._setattr('_frozen', False)
-        self._setattr('_ephemeral', False)
+        self.__dict__['_oid'] = _oid
+        self.__dict__['_parent'] = _parent
+        self.__dict__['_version'] = _version
+        self.__dict__['_frozen'] = False
+        self.__dict__['_ephemeral'] = False
 
     def __len__(self):
         return len(self.__dict__)
     
-    def _setattr(self, key, value):
-        self.__dict__[key] = value
-
-    def _getattr(self, key):
-        return self.__dict__[key]
-
-    def _delattr(self, key):
-        del self.__dict__[key]
-
-    _setitem = _setattr
-    _getitem = _getattr
-    _delitem = _delattr
-
     def _get_wrapped_type(self, type_):
         '''
         Returns a wrapped type corresponding to the original type.
@@ -94,11 +79,11 @@ class Cont(MutableMapping):
         '''
         Sets attributes to a wrapped one.
         '''
-        value._setattr('_version', 0)
-        value._setattr('_parent', self)
-        value._setattr('_oid', key)
-        value._setattr('_ephemeral', False)
-        self._setattr(key, value)
+        value.__dict__['_version'] = 0
+        value.__dict__['_parent'] = self
+        value.__dict__['_oid'] = key
+        value.__dict__['_ephemeral'] = False
+        self.__dict__[key] = value
 
     def __setattr__(self, key, value):
 
@@ -111,7 +96,7 @@ class Cont(MutableMapping):
             c = Cont(_oid=key, _parent=self)
             for k,v in value.items():
                 c[k] = v
-            self._setattr(key, c)
+            self.__dict__[key] = c
         elif type_ == list: # list => tuple (immutable list)
             value = tuple(value)
             self._set_builtin_attr(key, value)
@@ -120,24 +105,24 @@ class Cont(MutableMapping):
         elif type_ in wrapped_types: # Wrapped built-in types
             self._set_wrapped_attr(key, value)
         elif type_ == Cont: # Cont
-            self._setattr(key, value)
-            value._setattr('_parent', self)
+            self.__dict__[key] = value
+            value.__dict__['_parent'] = self
         elif type_ == bool:
-            self._setattr(key, Bool(key, self, value))
+            self.__dict__[key] = Bool(key, self, value)
         elif type_ == Func: # RPC function
-            self._setattr(key, RPC(key, self, value))
+            self.__dict__[key] = RPC(key, self, value)
         else:
             raise ValueError('Unidentifed type: {}'.format(type_))
 
     def __getattr__(self, key):
         self._immutability_check()
         cont = Cont(key, self)
-        self._setattr(key, cont)
+        self.__dict__[key] = cont
         return cont
 
     def __delattr__(self, key):
         self._immutability_check()
-        self._delattr(key)
+        del self.__dict__[key]
 
     def __getitem__(self, key):
         if key in self.__dict__:
@@ -150,7 +135,7 @@ class Cont(MutableMapping):
             return self.__dict__[key]
         else:
             cont = Cont(key, self)
-            self._setattr(key, cont)
+            self.__dict__[key] = cont
             return cont
 
     __setitem__ = __setattr__
@@ -171,7 +156,7 @@ class Cont(MutableMapping):
         Makes the self Cont object immutable recursively (incl. all the
         children).
         '''
-        self._setattr('_frozen', True)
+        self.__dict__['_frozen'] = True
         for v in self.values():
             if isinstance(v, Cont):
                 v.freeze_()
@@ -180,7 +165,7 @@ class Cont(MutableMapping):
         '''
         Checks if the self Cont object is immutable.
         '''
-        if self._getattr('_frozen'):
+        if self.__dict__['_frozen']:
             raise AttributeError()
 
     def root_(self):
@@ -195,7 +180,7 @@ class Cont(MutableMapping):
     def _qname(self):
         if self._parent:
             yield from self._parent._qname()
-        yield self._getattr('_oid')
+        yield self.__dict__['_oid']
 
     def qname_(self):
         '''
@@ -224,32 +209,30 @@ class Cont(MutableMapping):
         '''
         qname = self.qname_()
         if len(qname) > 0:
-            parent = self._getattr('_parent')
+            parent = self.__dict__['_parent']
             child = subtree
             for cont in reversed(qname[:-1]):
                 p = parent.copy_()
-                _oid = child._getattr('_oid')
-                p._setattr(_oid, child)
-                child._setattr('_parent', p)
+                _oid = child.__dict__['_oid']
+                p.__dict__[_oid] = child
+                child.__dict__['_parent'] = p
         return subtree
     
     def deepcopy_(self, new_parent=None):
         '''
         "deep" copy.
         '''
-        _oid = self._getattr('_oid')
+        _oid = self.__dict__['_oid']
         obj = Cont(_oid, _parent=new_parent)
-        obj_setattr = obj._setattr
-        deepcopy = copy.deepcopy
 
         # Deepcopies the subtree
         for k,v in self.__dict__.items():
             if k == '_parent' or k == '_frozen':
                 pass  # These attributes are set in __init__().
             elif isinstance(v, Cont) or self.is_wrapped(v):
-                obj_setattr(k, v.deepcopy_(new_parent=obj))
+                obj.__dict__[k] = v.deepcopy_(new_parent=obj)
             else:
-                obj_setattr(k, deepcopy(v))
+                obj.__dict__[k] = copy.deepcopy(v)
 
         # Deepcopies the parents 
         self._deepcopy_parents(obj)
@@ -262,9 +245,9 @@ class Cont(MutableMapping):
         '''
         obj = self.__class__() # Cont
         for k,v in self.__dict__.items():
-            obj._setattr(k, v)
+            obj.__dict__[k] = v
         if freeze:
-            obj._setattr('_frozen', True)
+            obj.__dict__['_frozen'] = True
         return obj
 
     def merge_(self, instance, _version=None):
@@ -280,7 +263,7 @@ class Cont(MutableMapping):
        
         '''
         if _version:
-            self._setattr('_version', 0)
+            self.__dict__['_version'] = 0
         for k,v in instance.items():
             if isinstance(v, Cont):
                 child = self[k]  # Calls Cont.__getattr__(k)
@@ -288,9 +271,9 @@ class Cont(MutableMapping):
             else:
                 self[k] = v 
                 if _version:
-                    v._setattr('_version', _version)
+                    v.__dict__['_version'] = _version
         if _version:
-            self._setattr('_version', _version)
+            self.__dict__['_version'] = _version
 
     def __iter__(self):
         '''
@@ -329,8 +312,9 @@ class Cont(MutableMapping):
         so that the tree can rollback to the previous state in case some trouble
         has happened. 
         '''
-        self._setattr('_parent', to)
-        to._setattr(self._getattr('_oid'), self) # The parent makes a link (an attribute) to the object
+        self.__dict__['_parent'] = to
+        _oid = self.__dict__['_oid']
+        to.__dict__[_oid] = self # The parent makes a link (an attribute) to the object
     
     def __str__(self):
         return self.walk_()
@@ -339,10 +323,10 @@ class Cont(MutableMapping):
         '''
         Sets the node ephemeral.
         '''
-        self._setattr('_ephemeral', True)
+        self.__dict__['_ephemeral'] = True
 
     def is_ephemeral_(self):
-        return self._getattr('_ephemeral')
+        return self.__dict__['_ephemeral']
 
     def _is_serializable(self, key):
         #return not key in ('_frozen', '_ephemeral')
@@ -366,7 +350,7 @@ class Cont(MutableMapping):
                     out[k] = v.serialize_(internal=internal)
             elif internal and not is_child_or_value:
                 if type_v == Cont or internal and type_v == RPC:
-                    s = v._getattr('_oid')
+                    s = v.__dict__['_oid']
                     out[k] = s
                 elif type_v == Func:
                     out[k] = str(v)
@@ -396,7 +380,7 @@ class Cont(MutableMapping):
         return json.dumps(out)
 
     def __repr__(self):
-        return "'<{} _oid={}>'".format(self.__class__, self._getattr('_oid'))
+        return "'<{} _oid={}>'".format(self.__class__, self.__dict__['_oid'])
 
     def is_empty_(self):
         _is_empty = True 
@@ -405,18 +389,11 @@ class Cont(MutableMapping):
                 _is_empty = False
         return _is_empty
 
-    def set_(self, value):
-        '''
-        "r.a.b(x=1).set_(1)" instead of "r.a.b(x=1) = 1".
-        '''
-        _parent = self._getattr('_parent')
-        _oid = self._getattr('_oid')
-        _parent.__setattr__(_oid, value)
-
     def delete_(self):
-        parent = self._getattr('_parent')
+        parent = self.__dict__['_parent']
         if parent:
-            parent._delattr(self._getattr('_oid'))
+            _oid = self.__dict__['_oid']
+            del parent.__dict__[_oid]
         if parent and parent.is_empty_():
             parent.delete_()
 
@@ -465,7 +442,9 @@ class Cont(MutableMapping):
         del self._parent
         del self._oid
         del self._ephemeral
-        c = copy.deepcopy(self)
+        # TODO: support deepcopy for wrapped types
+        #c = copy.deepcopy(self)
+        c = copy.copy(self)
         self._version = version
         self._parent = parent
         self._oid = oid
@@ -509,18 +488,15 @@ class Cont(MutableMapping):
         if internal:
             wrapped = {}
             wrapped['_value'] = self
-            wrapped['_version'] = self._getattr('_version')
-            wrapped['_oid'] = self._getattr('_oid')
-            wrapped['_parent'] = self._getattr('_parent')._getattr('_oid')
-            wrapped['_ephemeral'] = self._getattr('_ephemeral')
+            wrapped['_version'] = self.__dict__['_version']
+            wrapped['_oid'] = self.__dict__['_oid']
+            wrapped['_parent'] = self.__dict__['_parent'].__dict__['_oid']
+            wrapped['_ephemeral'] = self.__dict__['_ephemeral']
             return wrapped
         else:
             return self
 
     _attrs = {
-            '_getattr': _getattr,
-            '_setattr': _setattr,
-            '_delattr': _delattr,
             '_qname': _qname,
             'qname_': qname_,
             '_deepcopy_parents': _deepcopy_parents,
@@ -565,21 +541,21 @@ class Bool(Cont):
     def __init__(self, _oid, _parent, v):
         super().__init__(_oid, _parent)
         if v == True or v == False:
-            self._setattr('_value', v)
+            self.__dict__['_value'] = v
         else:
             raise ValueError('Not boolean type')
 
     def __bool__(self):
-        return self._getattr('_value')
+        return self.__dict__['_value']
 
     def __str__(self):
-        return str(self._getattr('_value'))
+        return str(self.__dict__['_value'])
 
     def __repr__(self):
-        return repr(self._getattr('_value'))
+        return repr(self.__dict__['_value'])
 
     def __eq__(self, v):
-        if self._getattr('_value') == v:
+        if self.__dict__['_value'] == v:
             return True
         else:
             return False
@@ -596,7 +572,7 @@ class Bool(Cont):
                 if k == '_value':
                     out[k] = v
                 elif k == '_parent':
-                    s = v._getattr('_oid')
+                    s = v.__dict__['_oid']
                     out[k] = s
                 elif self._is_serializable(k):
                     out[k] = v
@@ -605,7 +581,7 @@ class Bool(Cont):
             return self.__bool__()
 
     def deepcopy_(self, new_parent=None):
-        _oid = self._getattr('_oid')
+        _oid = self.__dict__['_oid']
         bool_ = Bool(_oid, _parent=new_parent, v=self.__bool__())
         self._deepcopy_parents(bool_)
         return bool_ 
@@ -617,23 +593,23 @@ class RPC(Cont):
     
     def __init__(self, _oid, _parent, func):
         super().__init__(_oid, _parent)
-        self._setattr('_value', func)
+        self.__dict__['_value'] = func
 
     @property
     def owner_id(self):
-        return self._getattr('_value').owner_id
+        return self.__dict__['_value'].owner_id
 
     def _get_func(self):
-        return self._getattr('_value')
+        return self.__dict__['_value']
 
     def __str__(self):
-        return str(self._getattr('_value'))
+        return str(self.__dict__['_value'])
 
     def __repr__(self):
-        return repr(self._getattr('_value'))
+        return repr(self.__dict__['_value'])
 
     def __eq__(self, func):
-        if self._getattr('_value') == func:
+        if self.__dict__['_value'] == func:
             return True
         else:
             return False
@@ -650,7 +626,7 @@ class RPC(Cont):
                 if k == '_value':
                     out[k] = str(v)
                 elif k == '_parent':
-                    s = v._getattr('_oid')
+                    s = v.__dict__['_oid']
                     out[k] = s
                 elif k != '_frozen':
                     out[k] = v
@@ -659,7 +635,7 @@ class RPC(Cont):
             return self.__str__()
 
     def deepcopy_(self, new_parent=None):
-        _oid = self._getattr('_oid')
+        _oid = self.__dict__['_oid']
         rpc = RPC(_oid, _parent=new_parent, func=self._get_func())
         self._deepcopy_parents(rpc)
         return rpc 

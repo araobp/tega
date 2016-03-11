@@ -53,13 +53,13 @@ def _dict2cont(cont, instance):
                 else:
                     cont[k] = v
                 if value:
-                    parent = cont._getattr('_parent')
-                    oid = cont._getattr('_oid')
+                    parent = cont.__dict__['_parent']
+                    oid = cont.__dict__['_oid']
                     parent[oid] = value
                     cont = parent[oid]
                     version = instance['_version']
                 if version:
-                    cont._setattr('_version', version)
+                    cont.__dict__['_version'] = version
     else:
         parent = cont._parent
         parent[cont._oid] = instance
@@ -106,12 +106,12 @@ def subtree(path, value):
 def _deserialize(root, dict_):
     for k, v in dict_.items():
         if k.startswith('_'):
-            root._setattr(k, v)
+            root.__dict__[k] = v
         else:
             value = dict_[k]
             if '_value' in value: 
                 root[k] = value['_value']
-                root[k]._setattr('_version', value['_version'])
+                root[k].__dict__['_version'] = value['_version']
             else:
                 root[k] = _deserialize(Cont(k), value)
     return root
@@ -133,7 +133,7 @@ def align_vector(cont):
     '''
     for k in cont:
         child = cont[k]
-        child._setattr('_parent', cont)
+        child.__dict__['_parent'] = cont
         if isinstance(child, Cont):
             align_vector(child)
 
@@ -145,7 +145,7 @@ def align_vector2(cont, version):
     for k in cont:
         child = cont[k]
         if child._version != version:
-            child._setattr('_parent', cont)
+            child.__dict__['_parent'] = cont
         elif isinstance(child, Cont):
             align_vector2(child, version)
 
@@ -160,10 +160,10 @@ def edges(cont):
     parent_version = cont['_version']
     for child in cont.values():
         child_qname = child.qname_()
-        child_version = child._getattr('_version')
+        child_version = child.__dict__['_version']
         yield [_edge(parent_qname, parent_version),
                 _edge(child_qname, child_version)]
-        c_parent = child._getattr('_parent')
+        c_parent = child.__dict__['_parent']
         c_parent_qname = c_parent.qname_()
         c_parent_version = c_parent['_version']
         yield [_edge(child_qname, child_version),
