@@ -40,7 +40,7 @@ x: 2
 - Concurrenty support with coroutine
 - NAT/HTTP-Proxy traversal: REST and WebSocket
 
-##Why graph(tree) structure is suitable for network config
+##Why graph(tree) structure is suitable for network config in some cases
 - In general, you had better use SQL (or SQL-like db) for storing config of a whole network.
 - You define Nodes table, Links table, Subnets table... a lot of tables.
 - Subsets (a set of rows from those tables) of the network config should be stored in a local db at each router. In general, such data has a tree structure (e.g., SNMP MIB).
