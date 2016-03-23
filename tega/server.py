@@ -713,7 +713,7 @@ def main():
     parser.add_argument("-O", "--operational",
             help="root object IDs of operational trees", type=str, nargs='*', default=None)
     parser.add_argument("-e", "--extensions", help="directory of tega plugins",
-            type=str, default=None)
+            type=str, nargs='*', default=None)
     parser.add_argument("-l", "--maxlen", help="the number of old roots kept in idb", type=int, default=tega.idb.OLD_ROOTS_LEN)
     parser.add_argument("-L", "--loglevel", help="logging level", type=str,
             default='INFO')

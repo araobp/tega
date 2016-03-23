@@ -137,7 +137,7 @@ class PlugIn(Subscriber):
         '''
         return tega.idb.get(path, version, regex_flag)
 
-def plugins(plugin_path):
+def plugins(plugin_paths):
     '''
     Returns a list of PlugIn subclasses.
 
@@ -145,20 +145,21 @@ def plugins(plugin_path):
     '''
     PACKAGE = 'plugins'
     classes = []
-    sys.path.append(plugin_path)
-    for script in os.listdir(os.path.join(plugin_path, PACKAGE)):
-        if script.endswith('.py'):
-            mod_name = script.replace('.py', '')
-            mod_str = '{}.{}'.format(PACKAGE, mod_name)
-            try:
-                if mod_str in sys.modules:
-                    mod = imp.reload(sys.modules[mod_str])
-                else:
-                    mod = importlib.import_module('{}.{}'.format(PACKAGE, mod_name))
-                for name, class_ in inspect.getmembers(mod, inspect.isclass):
-                    if issubclass(class_, PlugIn):
-                        classes.append(class_)
-            except ImportError:
-                raise
+    for plugin_path in plugin_paths:
+        sys.path.append(plugin_path)
+        for script in os.listdir(os.path.join(plugin_path, PACKAGE)):
+            if script.endswith('.py'):
+                mod_name = script.replace('.py', '')
+                mod_str = '{}.{}'.format(PACKAGE, mod_name)
+                try:
+                    if mod_str in sys.modules:
+                        mod = imp.reload(sys.modules[mod_str])
+                    else:
+                        mod = importlib.import_module('{}.{}'.format(PACKAGE, mod_name))
+                    for name, class_ in inspect.getmembers(mod, inspect.isclass):
+                        if issubclass(class_, PlugIn):
+                            classes.append(class_)
+                except ImportError:
+                    raise
     return classes
 
