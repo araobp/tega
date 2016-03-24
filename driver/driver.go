@@ -76,8 +76,8 @@ type Operation struct {
 
 // args and kwargs for RPC
 type ArgsKwargs struct {
-	Args   []interface{}
-	Kwargs map[string]interface{}
+	Args   []interface{}          `json:"args"`
+	Kwargs map[string]interface{} `json:"kwargs"`
 }
 
 // Result returend by RPC
@@ -248,11 +248,11 @@ func (ope *Operation) urlEncode(path string, ephemeral bool) *string {
 // CRUD read operation
 func (ope *Operation) Get(path string, instance interface{}) error {
 	url := ope.urlEncode(path, false)
-	resp, err := http.Get(*url)
-	defer resp.Body.Close()
+	response, err := http.Get(*url)
+	defer response.Body.Close()
 	var body []byte
 	if err == nil {
-		body, err = ioutil.ReadAll(resp.Body)
+		body, err = ioutil.ReadAll(response.Body)
 		if err == nil {
 			err = json.Unmarshal(body, instance)
 		}
@@ -286,21 +286,6 @@ func (ope *Operation) PutE(path string, instance interface{}) error {
 	return ope.put(path, instance, true)
 }
 
-// Sets the node ephemeral
-func (ope *Operation) Ephemeral(path string) error {
-	url := ope.urlEncode(path, false)
-	var err error = nil
-	if err == nil {
-		client := &http.Client{}
-		var request *http.Request
-		var response *http.Response
-		request, err = http.NewRequest(PATCH, *url, nil)
-		response, err = client.Do(request)
-		defer response.Body.Close()
-	}
-	return err
-}
-
 // CRUD delete operation
 func (ope *Operation) Delete(path string) error {
 	url := ope.urlEncode(path, false)
@@ -312,6 +297,27 @@ func (ope *Operation) Delete(path string) error {
 		request, err = http.NewRequest(DELETE, *url, nil)
 		response, err = client.Do(request)
 		defer response.Body.Close()
+	}
+	return err
+}
+
+// RPC operation
+func (ope *Operation) Rpc(path string, argsKwargs ArgsKwargs, result interface{}) error {
+	url := ope.urlEncode(path, false)
+	body, err := json.Marshal(argsKwargs)
+	if err == nil {
+		client := &http.Client{}
+		var request *http.Request
+		var response *http.Response
+		request, err = http.NewRequest(PUT, *url, strings.NewReader(string(body)))
+		response, err = client.Do(request)
+		defer response.Body.Close()
+		if err == nil {
+			body, err := ioutil.ReadAll(response.Body)
+			if err == nil {
+				err = json.Unmarshal(body, result)
+			}
+		}
 	}
 	return err
 }
