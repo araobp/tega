@@ -1,4 +1,4 @@
-#tega db
+# tega db
 
 ![travis](https://travis-ci.org/araobp/tega.svg?branch=master)
 
@@ -30,7 +30,7 @@ b: {c: 1}
 x: 2
 ```
 
-##Design policy
+## Design policy
 - Simplicity rather than high-performance and rigid schema
 - NOSQL for non big data (small data)
 - Embeddable data base
@@ -40,16 +40,16 @@ x: 2
 - Concurrenty support with coroutine
 - NAT/HTTP-Proxy traversal: REST and WebSocket
 
-##Why graph(tree) structure is suitable for network config in some cases
+## Why graph(tree) structure is suitable for network config in some cases
 - In general, you had better use SQL (or SQL-like db) for storing config of a whole network.
 - You define Nodes table, Links table, Subnets table... a lot of tables.
 - A subset (a set of rows from those tables) of the network config should be stored in a local db at each router. In general, such data has a tree structure (e.g., SNMP MIB).
 - There are two choices: SQL or graph(tree) database. It depends... In my case, I have chosen grap(tree) database, since I want version controll for the config (like "git").
 
-##Project goal
+## Project goal
 ![goal](https://docs.google.com/drawings/d/1CVeMUwvrKnbgvjriW0ftwnIMtjiMDlDMCEN0tPTSujs/pub?w=640&h=480)
 
-##Use cases
+## Use cases
 - [NLAN](https://github.com/araobp/nlan)
 - BBR remote config
 - OpenWrt remote config
@@ -58,7 +58,7 @@ x: 2
 
 ![Deployment](https://docs.google.com/drawings/d/16z8YFQztsGXWacq8fWyVzs85UTjZqllIs-hGGwav9GY/pub?w=640&h=480)
 
-##Installation
+## Installation
 
 You need to have python3.5 installed on your Debian/Ubuntu Linux.
 
@@ -84,7 +84,7 @@ $ tega-cli
 ```
 
 
-##Current architecture
+## Current architecture
 ```
                            [cli.py]
                                |
@@ -103,9 +103,9 @@ $ tega-cli
    commit-log                                       commit-log
 ```
 
-##Documentation
+## Documentation
 
-###Specification
+### Specification
 - [tree structure](./doc/tree.png)
 - [tree structure implemention: Cont class and its attributes](./doc/attributes.md)
 - [YANG-tega comparisons](./doc/yang-tega-comparisons.md)
@@ -116,29 +116,29 @@ $ tega-cli
 - [subscription scope](./doc/subscription_scope.md)
 - [Guideline](./doc/guideline.md)
 
-###Usage
+### Usage
 - [CLI command usage](./doc/usage.md)
 - [data visualization by using Jupyter notebook](./doc/jupyter.md)
 
-###CRUD operations
+### CRUD operations
 ![operations to the tree](https://docs.google.com/drawings/d/1KOUuiQcosYpfEi4HyF7BYsiiSEW_2rJsZKy9xIPuIZQ/pub?w=600&h=480)
 
-###Rollback
+### Rollback
 ![rollback](https://docs.google.com/drawings/d/1nO-BKRYPdFKBjtkdOYpFiRd1WBQPMLHp3ojlqEroJVg/pub?w=600&h=480)
 
-###Consistency
+### Consistency
 ![CP](https://docs.google.com/drawings/d/11fC2DojI9gzw-FV3NG8Ubh97sKm0RmWk-tNJBu1Tt-M/pub?w=600&h=480)
 
-###Collision detection
+### Collision detection
 ![Collision](https://docs.google.com/drawings/d/1D45tSElc7S4bnPCV_VLwJXua2O08Jv2gMqL4xeLaf2s/pub?w=600&h=480)
 
-###Garbage collection
+### Garbage collection
 ![garbage collection](https://docs.google.com/drawings/d/1DhOdnzqqG1wjs2-duG7f9jCQAyki-7qsrEG9pfBVKcI/pub?w=600&h=480)
 
-###RPC routing
+### RPC routing
 ![rpc routing](https://docs.google.com/drawings/d/1GHHYrF3s0MRypT_SxHkDAT-aFTfCtMh9NkqQrVEtvqo/pub?w=600&h=480)
 
-###Integration patterns
+### Integration patterns
 ![integration patterns](https://docs.google.com/drawings/d/1CkqZxVHghA-9UuZ33ZHENcABnyHld5PtPw1CWY9LCJ8/pub?w=600&h=480)
 
 For example,
@@ -149,19 +149,19 @@ For example,
 
 You had better study how databases (incl. NOSQL ones) realize data synchronization in a cluster.
 
-##Note
+## Note
 
-####Implementation
+#### Implementation
 - Tega db is still in alpha release and part of the documentation here has not been implemented yet.
 
-####Performance
+#### Performance
 it is a schema-less database and the performance (especially write-performance) of this database is not good:
 - dynamic typing
 - nested hash map (hash collisions, rehashing...)
 - it makes use of for-loop a lot (Python's for-loop performance is not good)
 - it saves every commit log onto a storage
 
-##References
+## References
 * [ZooKeeper](https://www.usenix.org/legacy/event/atc10/tech/full_papers/Hunt.pdf)
 * [Cassandra](http://wiki.apache.org/cassandra/ArticlesAndPresentations)
 * [Hazelcast](https://hazelcast.org/)
