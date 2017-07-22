@@ -1,4 +1,4 @@
-##SCOPE.LOCAL
+## SCOPE.LOCAL
 ```
 plugin       [local idb]                  [global idb]
 driver       idb server
@@ -6,7 +6,7 @@ driver       idb server
     |-- SUB ->|     |                         |
 ```
 
-##SCOPE.GLOBAL
+## SCOPE.GLOBAL
 ```
 plugin       [local idb]                  [global idb]
 driver       idb server                    server  idb
