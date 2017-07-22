@@ -1,6 +1,6 @@
-#Guideline
+# Guideline
 
-##Modelling
+## Modelling
 If you use this database for CRUD operations in DevOps and if you also need atomicity for CRUD operations, three-tier tree structure is ideal from an implementational point of view. 
 
 Note: for a large DevOps deployment, you may want to use either ZooKeeper/Cassandra(column-oriented) or OpenDaylight MD-SAL for such a purpose.
