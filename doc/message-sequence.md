@@ -1,5 +1,6 @@
-#REST
-##REQUEST/RESPONSE
+# REST
+
+## REQUEST/RESPONSE
 Synchronous
 ```
                [client]                      [server]
@@ -12,8 +13,8 @@ Synchronous
 
 ```
 
-#WebSocket
-##SESSION/SESSIONACK
+# WebSocket
+## SESSION/SESSIONACK
 Synchronous
 ```
                [client]                      [server]
@@ -25,7 +26,7 @@ Synchronous
 
 ```
 
-##SUBSCRIBE/UNSUBSCRIBE
+## SUBSCRIBE/UNSUBSCRIBE
 Asynchronous/sequencial
 ```
                [client]                      [server]
@@ -36,7 +37,7 @@ Asynchronous/sequencial
                   |                             |
 
 ```
-##NOTIFY
+## NOTIFY
 Asynchronous/sequencial
 ```
                [client]                      [server]                      [client]
@@ -47,7 +48,7 @@ Asynchronous/sequencial
                   |                             |
 
 ```
-##PUBLISH/MESSAGE
+## PUBLISH/MESSAGE
 Asynchronous/sequencial
 ```
                [client]                      [server]                    [client] [client]
@@ -58,7 +59,7 @@ Asynchronous/sequencial
 
 ```
 
-##ROLLBACK
+## ROLLBACK
 Asynchronous/sequencial
 ```
                [client]                      [server]                      [client]
@@ -70,7 +71,7 @@ Asynchronous/sequencial
 
 ```
 
-##REQUEST/RESPONSE
+## REQUEST/RESPONSE
 Synchronous
 ```
                [client]                      [server]
