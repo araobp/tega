@@ -1,6 +1,6 @@
-#sync_path and notifications
+# sync_path and notifications
 
-##sync_path
+## sync_path
 sync_path is a path on a tree to define a scope for data synchronization between Master and Slave.
 
 Data modification (put/delete) is notified to a peer (from Slave to Master, or from Master to Slave).
@@ -18,7 +18,7 @@ Data modification (put/delete) is notified to a peer (from Slave to Master, or f
 sync_path: a.b.c
 ```
 
-##Data Change Notification patterns
+## Data Change Notification patterns
 
 |put/delete|notify|path   |
 |----------|------|-------|
