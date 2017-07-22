@@ -1,4 +1,4 @@
-##YANG-tega comparison
+## YANG-tega comparison
 
 |YANG      |tega                                                           |
 |----------|---------------------------------------------------------------|
@@ -9,7 +9,7 @@
 |presence  |Cont with no value                                             |
 |leafref   |qname (under study)                                            |
 
-##How tega's data structure (tega.tree) works internally
+## How tega's data structure (tega.tree) works internally
 
 |tega oid (object identifier)   |How it works internally                                |
 |-------------------------------|-------------------------------------------------------|
