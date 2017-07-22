@@ -1,4 +1,4 @@
-##tega messaging
+## tega messaging
 
 In tega,
 - REST APIs for CRUD 
@@ -6,7 +6,7 @@ In tega,
 
 "tega.messaging" package provides methods for synchronous request/response messaging over WebSocket.
 
-##tega WebSocket message format
+## tega WebSocket message format
 ```
         seq_no                  = 1*DIGIT
         backto                  = 1*DIGIT
