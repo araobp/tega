@@ -1,6 +1,6 @@
-#Master-Master synchronization
+# Master-Master synchronization
 
-##Master-Slave relationship
+## Master-Slave relationship
 tega takes A(Availability) and P(Partition Tolerance).
 
 Data change made on Master is automatically propagated to Slave.
@@ -14,7 +14,7 @@ tega provides "sync" command to check if Master and Slace are in sync or not. If
 read/write => [Slave]  [Slave] <= read/write is still possible
 ```
 
-##Notifications
+## Notifications
 ```
 notifications: [{},...] includes each CRUD operation and rollback operation.
 ```
@@ -38,7 +38,7 @@ put/delete <--|                                            |
     notify <--|--> X                                       |
 ```
 
-##Manual synchronization ("sync" command)
+## Manual synchronization ("sync" command)
 ```
                                                     log_cache in idb
                                                    +--------------------------+
