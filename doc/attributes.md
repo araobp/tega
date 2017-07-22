@@ -1,4 +1,4 @@
-##Tree structure
+## Tree structure
 ```
     Cont --+-- Cont --+-- wrapped_str
            |          +-- wrapped_int
@@ -14,9 +14,9 @@
            +-- Cont --+-- RPC(Func)
 ```
 
-##node attributes
+## node attributes
 
-###Cont class
+### Cont class
 
 |Attribute |Explanation                       |                                             |
 |----------|----------------------------------|---------------------------------------------|
@@ -27,7 +27,7 @@
 |_ephemeral|Ephemeral node                    |True if it is ephemeral                      |
 |_frozen   |Immutability                      |True as long as the attribute is immutable   |
 
-###Bool(Cont) class
+### Bool(Cont) class
 
 Bool class inherits all the attributes of Cont with an additional attribute as follows:
 
@@ -35,7 +35,7 @@ Bool class inherits all the attributes of Cont with an additional attribute as f
 |----------|----------------------------------|---------------------------------------------|
 |_value    |Reference to an value             |An instance of Bool(True or False)           |
 
-###RPC(Cont) class
+### RPC(Cont) class
 
 RPC class inherits all the attributes of Cont with an additional attribute as follows:
 
@@ -57,7 +57,7 @@ Chained objects
 root.__dict__['a'] --> a.__dict__['b'] --> b.__dict__['c'] --> wrapped object
 ```
 
-##Cont value: function
+## Cont value: function
 
 Functions are wrapped with RPC class that is a child class of Cont.
 ```
@@ -66,7 +66,7 @@ Chained objects
 root.__dict__['a'] --> a.__dict__['b'] --> b.__dict__['c'] --> RPC.__dict__['_object'] --> Func
 ```
 
-##Cont attribute: _parent
+## Cont attribute: _parent
 
 _parent points to its parent. You can reach its root parent by tarversing on _parent attributes recursively. 
 ```
