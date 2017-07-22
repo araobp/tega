@@ -1,6 +1,6 @@
-#In-memory object database (idb)
+# In-memory object database (idb)
 
-##Transaction
+## Transaction
 tega-dbにおけるtransactionとは、一括でCRUD operationを実行する事。commit()により各オペレーションのログがtega.dbに追記され、また、in-memory DBを更新する。
 
 ```
@@ -18,11 +18,11 @@ t.delete("e.f.g")
 t.commit()
 ```
 
-##Persistence
+## Persistence
 - "tega.db" へ追記型でlogを書きこむ。
 - 再起動時に"tega.db"を読み込むことで、multi-versionなtreeをin-memoryに再構成
 
-##Collision detection
+## Collision detection
 - put(), delete()とも、versionチェックによるcollision detection機構を備える。しかし、これは、optimistic lockingであり、pessimistic lockingが必要な場合には対応できない。 
 - Local DBとMaster DB間のsync時にはcollisionが発生する場合がある＝＞conflict resolution。
 
