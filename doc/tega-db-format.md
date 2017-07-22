@@ -1,4 +1,4 @@
-#tega db commit-log format
+# tega db commit-log format
 
 ```
 ?                                  <== COMMIT_START_MARKER
