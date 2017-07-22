@@ -1,4 +1,4 @@
-#tega CLI usage
+# tega CLI usage
 
 ```
            [tega db]
@@ -8,7 +8,7 @@
        Terminal 1  Terminal 2
 ```
 
-###Get with regular expressions
+### Get with regular expressions
 ```
 tega CLI (q: quit, h:help)
 [tega: 0] get r-a
@@ -79,7 +79,7 @@ r-b.b:
 
 ```
 
-###Transaction
+### Transaction
 ```
 tega CLI (q: quit, h:help)
 [tega: 0] begin
@@ -108,7 +108,7 @@ txid: 3083e119-5272-4881-9493-1da2a2de3ac0 commited
 [tega: 9]
 ```
 
-###Transaction with collision detection
+### Transaction with collision detection
 ```
 <<<At Terminal 1>>>
 tega CLI (q: quit, h:help)
@@ -146,7 +146,7 @@ txid: ffeb8969-f6a2-4100-8ee7-f113dd7eff68 commited
 
 ```
 
-###Messaging(pubsub)
+### Messaging(pubsub)
 ```
 <<<At Terminal 1>>>
 $ tega-cli -s
@@ -169,7 +169,7 @@ Good Morning!
 
 ```
 
-###Messaging(pubsub) with regular expressions
+### Messaging(pubsub) with regular expressions
 ```
 <<<At Terminal 1>>
 $ tega-cli -s
@@ -198,7 +198,7 @@ YYY
 
 ```
 
-###Manipulating ephemeral nodes
+### Manipulating ephemeral nodes
 ```
 <<<At Terminal 1>>>
 $ tega-cli -s
@@ -236,7 +236,7 @@ tega CLI (q: quit, h:help)
 {x: 2}
 ```
 
-###Taking a snapshot
+### Taking a snapshot
 ```
 $ tega-cli
 tega CLI (q: quit, h:help)
